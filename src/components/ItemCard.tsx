@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateTimeJst, isOverdue } from "@/lib/dateUtils";
-import type { Item } from "@/types/database";
+import { ITEM_TYPE_LABEL, type Item } from "@/types/database";
 import { OverdueBadge, StatusBadge } from "./StatusBadge";
 
 export function ItemCard({ item, assigneeName }: { item: Item; assigneeName?: string }) {
@@ -13,7 +13,7 @@ export function ItemCard({ item, assigneeName }: { item: Item; assigneeName?: st
     >
       <div className="mb-2 flex items-center gap-2">
         <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-          {item.type === "todo" ? "ToDo" : "予定"}
+          {ITEM_TYPE_LABEL[item.type]}
         </span>
         <StatusBadge status={item.status} />
         {overdue && <OverdueBadge />}

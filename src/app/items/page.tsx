@@ -43,7 +43,7 @@ function ItemsContent() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">予定・ToDo一覧</h1>
+        <h1 className="text-xl font-bold text-gray-900">予定・実施作業一覧</h1>
         <Link
           href="/items/new"
           className="flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white"

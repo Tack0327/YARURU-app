@@ -4,9 +4,9 @@
 
 ## プロジェクト概要
 
-**YARURU** は、Supabase認証機能付きの家族向け予定・ToDo共有Webアプリケーションです。
+**YARURU** は、Supabase認証機能付きの家族向け予定・実施作業共有Webアプリケーションです。
 メールアドレス＋パスワードでの会員登録・ログインを行い、1つの家族グループに参加したうえで、
-家族全員が予定・ToDo（タイトル・日時・担当者・ステータス）を一覧・カレンダーで確認し、
+家族全員が予定・実施作業（タイトル・日時・担当者・ステータス）を一覧・カレンダーで確認し、
 登録・編集・削除・完了管理できることを目的としています。
 
 ## 技術スタック
@@ -37,24 +37,23 @@ YARURU/
 │   │   ├── signup/page.tsx
 │   │   ├── groups/new/page.tsx    # 家族グループ作成
 │   │   ├── groups/join/page.tsx   # 招待コードで参加
-│   │   ├── home/page.tsx          # 期限超過・今日・今後の予定
+│   │   ├── home/page.tsx          # カレンダー統合済みホーム（期限超過・今日の作業・今後の予定）
 │   │   ├── items/page.tsx         # 一覧（検索・絞り込み・並び替え）
 │   │   ├── items/new/page.tsx
 │   │   ├── items/[id]/page.tsx    # 詳細・編集・削除
-│   │   ├── calendar/page.tsx
 │   │   ├── history/page.tsx       # 完了履歴
-│   │   └── settings/page.tsx      # グループ情報・メンバー・ログアウト
+│   │   └── settings/page.tsx      # グループ情報・メンバー
 │   ├── components/
 │   │   ├── AuthProvider.tsx   # 認証状態・所属グループのContext
-│   │   ├── RequireAuth.tsx    # 未ログイン/未参加時のリダイレクト
+│   │   ├── RequireAuth.tsx    # 未ログイン/未参加時のリダイレクト・共通ヘッダー(表示名・ログアウト)
 │   │   ├── NavBar.tsx
 │   │   ├── ToastProvider.tsx
-│   │   ├── ItemForm.tsx / ItemCard.tsx / StatusBadge.tsx
+│   │   ├── ItemForm.tsx / ItemCard.tsx / StatusBadge.tsx / PasswordInput.tsx
 │   │   ├── FilterBar.tsx
-│   │   └── CalendarView.tsx
+│   │   └── CalendarView.tsx       # home/page.tsxに埋め込むカレンダーウィジェット
 │   ├── lib/
 │   │   ├── supabase/client.ts / server.ts
-│   │   ├── items.ts       # 予定・ToDoのCRUD・検索絞り込み並び替え
+│   │   ├── items.ts       # 予定・実施作業のCRUD・検索絞り込み並び替え
 │   │   ├── families.ts    # 家族グループの作成・参加・メンバー取得
 │   │   ├── dateUtils.ts   # Asia/Tokyo変換・期限超過・14日非表示判定
 │   │   └── notifications.ts # 通知要否の判定（送信処理は将来LINE連携用に未実装）
@@ -69,7 +68,7 @@ YARURU/
 
 - コンポーネントは役割ごとに分割し、Supabaseへのデータアクセスは `src/lib/` 配下の関数に集約する（UIコンポーネントから直接クエリを書かない）。
 - Supabaseとの接続情報（URL・匿名キー）は `.env.local` で管理し、コードに直接埋め込まない。`service_role` キーはクライアントに公開しない。
-- 予定・ToDoへのアクセスはSupabaseのRLS（行レベルセキュリティ）により「自分が所属する家族グループのメンバーのみ」に制限する。
+- 予定・実施作業へのアクセスはSupabaseのRLS（行レベルセキュリティ）により「自分が所属する家族グループのメンバーのみ」に制限する。
 - 完了日時の自動設定・解除と `updated_at` の更新は、DBトリガー（`items_before_update`）で一元管理し、クライアント実装に依存させない。
 - 完了から14日経過した項目は削除せず、クエリ条件（`isHiddenAfterCompletion`）で通常一覧から除外し、完了履歴画面からのみ確認できるようにする。
 - 動作確認は `npm run dev` で開発サーバーを起動して行う。

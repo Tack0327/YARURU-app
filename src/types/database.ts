@@ -1,6 +1,11 @@
 export type ItemType = "event" | "todo";
 export type ItemStatus = "not_started" | "in_progress" | "done";
 
+export const ITEM_TYPE_LABEL: Record<ItemType, string> = {
+  event: "予定",
+  todo: "実施作業",
+};
+
 export type Profile = {
   id: string;
   display_name: string;

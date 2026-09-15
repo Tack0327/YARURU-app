@@ -30,7 +30,7 @@ export function FilterBar({
           aria-label="種別で絞り込み"
         >
           <option value="">種別: すべて</option>
-          <option value="todo">ToDo</option>
+          <option value="todo">実施作業</option>
           <option value="event">予定</option>
         </select>
         <select

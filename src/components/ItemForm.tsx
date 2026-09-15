@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/dateUtils";
 import type { MemberWithProfile } from "@/lib/families";
-import type { Item, ItemStatus, ItemType } from "@/types/database";
+import { ITEM_TYPE_LABEL, type Item, type ItemStatus, type ItemType } from "@/types/database";
 
 export type ItemFormValues = {
   type: ItemType;
@@ -86,7 +86,7 @@ export function ItemForm({
               onChange={() => setType(value)}
               className="sr-only"
             />
-            {value === "todo" ? "ToDo" : "予定"}
+            {ITEM_TYPE_LABEL[value]}
           </label>
         ))}
       </fieldset>
