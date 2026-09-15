@@ -109,7 +109,8 @@ YARURU/
 
 ## デプロイ情報
 
-- 現時点では未デプロイ。将来的にVercel等へのデプロイを予定。
+- 本番URL：https://yaruru-app.vercel.app/
+- Supabaseプロジェクト名：YARURU
 
 ## 回答言語
 
