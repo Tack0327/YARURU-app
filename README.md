@@ -52,6 +52,16 @@ npm run dev
 
 [http://localhost:3000](http://localhost:3000) を開くと、未ログイン時はログイン画面（`/login`）にリダイレクトされます。新規登録後、家族グループを作成するか、招待コードで既存のグループに参加してください。
 
+## Vercelへのデプロイ
+
+Next.jsプロジェクトのため `vercel.json` などの追加設定は不要で、Vercelが自動でルーティングを処理します。デプロイ前に以下だけ設定してください。
+
+1. Vercelのプロジェクト → **Settings > Environment Variables** で、`.env.local` と同じ値を登録する。
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - 対象環境（Production / Preview / Development）にチェックを入れる。
+2. `NEXT_PUBLIC_` 環境変数はビルド時にコードへ埋め込まれるため、**設定後に必ず再デプロイ**する（保存しただけでは既存のビルドに反映されない）。未設定のままビルドすると、`AuthProvider` の初期化で `Invalid supabaseUrl` エラーとなりビルドが失敗する。
+
 ## テスト・検証コマンド
 
 ```bash
