@@ -181,3 +181,19 @@ export async function deleteItem(supabase: Client, itemId: string): Promise<void
   const { error } = await supabase.from("items").delete().eq("id", itemId);
   if (error) throw error;
 }
+
+export type BulkUpdateItemInput = Partial<{
+  assigneeId: string | null;
+  status: ItemStatus;
+}>;
+
+/** 一覧で選択した複数項目の担当者・ステータスをまとめて変更する */
+export async function bulkUpdateItems(supabase: Client, itemIds: string[], input: BulkUpdateItemInput): Promise<void> {
+  const payload: Database["public"]["Tables"]["items"]["Update"] = {};
+  if (input.assigneeId !== undefined) payload.assignee_id = input.assigneeId;
+  if (input.status !== undefined) payload.status = input.status;
+  if (itemIds.length === 0 || Object.keys(payload).length === 0) return;
+
+  const { error } = await supabase.from("items").update(payload).in("id", itemIds);
+  if (error) throw error;
+}

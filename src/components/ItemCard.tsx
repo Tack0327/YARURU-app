@@ -18,16 +18,39 @@ function scheduleText(item: Item): string | null {
   return `期限: ${formatDateTimeJst(item.due_at)}`;
 }
 
-export function ItemCard({ item, assigneeName }: { item: Item; assigneeName?: string }) {
+export function ItemCard({
+  item,
+  assigneeName,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
+}: {
+  item: Item;
+  assigneeName?: string;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+}) {
   const overdue = isOverdue(item.due_at, item.status);
   const schedule = scheduleText(item);
 
-  return (
-    <Link
-      href={`/items/${item.id}`}
-      className={`block rounded-xl border-y border-r border-gray-200 bg-white p-4 shadow-sm active:bg-gray-50 border-l-4 ${ITEM_TYPE_ACCENT[item.type].border}`}
-    >
+  const className = `block rounded-xl border-y border-r border-gray-200 bg-white p-4 shadow-sm border-l-4 ${ITEM_TYPE_ACCENT[item.type].border} ${
+    selectionMode ? (selected ? "bg-blue-50 ring-2 ring-blue-500" : "") : "active:bg-gray-50"
+  }`;
+
+  const content = (
+    <>
       <div className="mb-2 flex items-center gap-2">
+        {selectionMode && (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`${item.title}を選択`}
+            className="h-4 w-4 shrink-0 rounded border-gray-300"
+          />
+        )}
         <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
           {ITEM_TYPE_LABEL[item.type]}
         </span>
@@ -44,6 +67,20 @@ export function ItemCard({ item, assigneeName }: { item: Item; assigneeName?: st
         {schedule && <span>{schedule}</span>}
         {assigneeName && <span>担当: {assigneeName}</span>}
       </div>
+    </>
+  );
+
+  if (selectionMode) {
+    return (
+      <div onClick={onToggleSelect} className={`${className} cursor-pointer`}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={`/items/${item.id}`} className={className}>
+      {content}
     </Link>
   );
 }
