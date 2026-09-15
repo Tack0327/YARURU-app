@@ -6,7 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { CalendarView } from "@/components/CalendarView";
 import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
-import { dateKeyJst, isActiveOnDate, isOverdue } from "@/lib/dateUtils";
+import { dateKeyJst, isActiveOnDate, isOverdue, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { fetchItems, sortItemsForHome } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
@@ -15,6 +15,13 @@ import type { Item, ItemType } from "@/types/database";
 function itemCalendarDateKey(item: Item): string {
   return dateKeyJst(item.due_at) || dateKeyJst(item.start_at);
 }
+
+const UPCOMING_RANGE_OPTIONS: { value: UpcomingRange; label: string }[] = [
+  { value: "week", label: "1週間以内" },
+  { value: "month", label: "1か月以内" },
+  { value: "3months", label: "3か月以内" },
+  { value: "6months", label: "6か月以内" },
+];
 
 function HomeContent() {
   const { group } = useAuth();
@@ -28,6 +35,7 @@ function HomeContent() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  const [upcomingRange, setUpcomingRange] = useState<UpcomingRange>("month");
 
   const load = useCallback(async () => {
     if (!group) return;
@@ -94,12 +102,14 @@ function HomeContent() {
       (item) => !isOverdue(item.due_at, item.status, now) && isActiveOnDate(item.start_at, item.due_at, todayKey)
     )
   );
+  const upcomingRangeEnd = upcomingRangeEndKey(upcomingRange, now);
   const upcomingItems = sortItemsForHome(
     items.filter(
       (item) =>
         !isOverdue(item.due_at, item.status, now) &&
         !isActiveOnDate(item.start_at, item.due_at, todayKey) &&
-        item.status !== "done"
+        item.status !== "done" &&
+        itemCalendarDateKey(item) <= upcomingRangeEnd
     )
   );
   const selectedDateItems = selectedDateKey ? items.filter((item) => itemCalendarDateKey(item) === selectedDateKey) : [];
@@ -165,12 +175,36 @@ function HomeContent() {
         emptyText="今日の予定・実施作業はありません"
         memberNameOf={memberNameOf}
       />
-      <Section
-        title="今後の予定"
-        items={upcomingItems}
-        emptyText="今後の予定・実施作業はありません"
-        memberNameOf={memberNameOf}
-      />
+      <section>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-bold text-gray-500">今後の予定</h2>
+          <div className="flex flex-wrap gap-1">
+            {UPCOMING_RANGE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setUpcomingRange(option.value)}
+                className={`min-h-8 rounded-full border px-3 text-xs font-semibold ${
+                  upcomingRange === option.value
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : "border-gray-300 text-gray-600"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {upcomingItems.length === 0 ? (
+          <p className="text-sm text-gray-400">今後の予定・実施作業はありません</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {upcomingItems.map((item) => (
+              <ItemCard key={item.id} item={item} assigneeName={memberNameOf(item.assignee_id)} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

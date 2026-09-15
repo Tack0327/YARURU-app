@@ -9,6 +9,7 @@ import {
   isOverdue,
   timeOfDayJst,
   toDatetimeLocalValue,
+  upcomingRangeEndKey,
 } from "@/lib/dateUtils";
 
 describe("dateUtils", () => {
@@ -124,6 +125,27 @@ describe("dateUtils", () => {
 
     it("returns null when no date is given", () => {
       expect(combineDateAndTimeJst("", "09:30")).toBeNull();
+    });
+  });
+
+  describe("upcomingRangeEndKey", () => {
+    // 2026-06-15T00:00:00Z -> JST 2026-06-15(月)
+    const now = new Date("2026-06-15T00:00:00.000Z");
+
+    it("returns 7 days later for \"week\"", () => {
+      expect(upcomingRangeEndKey("week", now)).toBe("2026-06-22");
+    });
+
+    it("returns the same day next month for \"month\"", () => {
+      expect(upcomingRangeEndKey("month", now)).toBe("2026-07-15");
+    });
+
+    it("returns the same day 3 months later for \"3months\"", () => {
+      expect(upcomingRangeEndKey("3months", now)).toBe("2026-09-15");
+    });
+
+    it("returns the same day 6 months later for \"6months\"", () => {
+      expect(upcomingRangeEndKey("6months", now)).toBe("2026-12-15");
     });
   });
 

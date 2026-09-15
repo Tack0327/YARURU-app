@@ -120,6 +120,30 @@ export function generateRecurrenceDateKeys(
   return keys;
 }
 
+export type UpcomingRange = "week" | "month" | "3months" | "6months";
+
+const UPCOMING_RANGE_MONTHS: Record<Exclude<UpcomingRange, "week">, number> = {
+  month: 1,
+  "3months": 3,
+  "6months": 6,
+};
+
+/**
+ * ホームの「今後の予定」フィルター用に、指定した範囲の末日をAsia/Tokyoの日付キー「YYYY-MM-DD」で返す。
+ * 「1週間以内」は今日から7日後までとする。
+ */
+export function upcomingRangeEndKey(range: UpcomingRange, now: Date = new Date()): string {
+  const todayKey = dateKeyJst(now.toISOString());
+  const [year, month, day] = todayKey.split("-").map(Number);
+  const todayUtc = new Date(Date.UTC(year, month - 1, day));
+
+  if (range === "week") {
+    return dateKeyFromUtcDate(new Date(todayUtc.getTime() + 7 * 24 * 60 * 60 * 1000));
+  }
+
+  return dateKeyFromUtcDate(new Date(Date.UTC(year, month - 1 + UPCOMING_RANGE_MONTHS[range], day)));
+}
+
 /** 期限超過かどうか（未完了かつ期限が現在時刻より過去） */
 export function isOverdue(dueAtIso: string | null, status: string, now: Date = new Date()): boolean {
   if (!dueAtIso || status === "done") return false;
