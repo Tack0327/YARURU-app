@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -9,9 +8,8 @@ import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
 
 function SettingsContent() {
-  const { group, user, signOut } = useAuth();
+  const { group, user } = useAuth();
   const { showToast } = useToast();
-  const router = useRouter();
   const [supabase] = useState(() => createClient());
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +29,6 @@ function SettingsContent() {
     } catch {
       showToast("コピーに失敗しました", "error");
     }
-  }
-
-  async function handleSignOut() {
-    await signOut();
-    router.replace("/login");
   }
 
   return (
@@ -74,13 +67,6 @@ function SettingsContent() {
           ))}
         </ul>
       </section>
-
-      <button
-        onClick={handleSignOut}
-        className="min-h-12 rounded-lg border border-gray-300 text-base font-semibold text-gray-700"
-      >
-        ログアウト
-      </button>
     </div>
   );
 }

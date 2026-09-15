@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 
 function NewGroupForm() {
   const router = useRouter();
-  const { refreshGroup, signOut } = useAuth();
+  const { refreshGroup } = useAuth();
   const [supabase] = useState(() => createClient());
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -72,9 +72,6 @@ function NewGroupForm() {
             参加する
           </Link>
         </p>
-        <button onClick={() => signOut()} className="mt-8 w-full text-center text-sm text-gray-400">
-          ログアウト
-        </button>
       </div>
     </div>
   );

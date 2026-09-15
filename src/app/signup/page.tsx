@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PasswordInput } from "@/components/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
@@ -98,15 +99,12 @@ export default function SignupPage() {
             <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
               パスワード（6文字以上）
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
-              required
-              minLength={6}
               autoComplete="new-password"
+              minLength={6}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+              onChange={setPassword}
             />
           </div>
           {error && (

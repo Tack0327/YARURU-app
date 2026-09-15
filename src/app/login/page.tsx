@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PasswordInput } from "@/components/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -51,15 +52,7 @@ export default function LoginPage() {
             <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
               パスワード
             </label>
-            <input
-              id="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
-            />
+            <PasswordInput id="password" autoComplete="current-password" value={password} onChange={setPassword} />
           </div>
           {error && (
             <p role="alert" className="text-sm text-red-600">

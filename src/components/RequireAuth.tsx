@@ -1,12 +1,39 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
 import { NavBar } from "./NavBar";
 
 function LoadingScreen() {
   return <div className="flex min-h-screen items-center justify-center text-gray-500">読み込み中...</div>;
+}
+
+function TopBar() {
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const displayName = (user?.user_metadata?.display_name as string | undefined) || user?.email || "";
+
+  async function handleSignOut() {
+    setLoggingOut(true);
+    await signOut();
+    router.replace("/login");
+  }
+
+  return (
+    <header className="sticky top-0 z-30 flex items-center justify-end gap-3 border-b border-gray-200 bg-white px-4 py-2">
+      <span className="truncate text-sm font-medium text-gray-700">{displayName}</span>
+      <button
+        type="button"
+        onClick={handleSignOut}
+        disabled={loggingOut}
+        className="min-h-9 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-600 disabled:opacity-50"
+      >
+        {loggingOut ? "..." : "ログアウト"}
+      </button>
+    </header>
+  );
 }
 
 /** ログイン済みであることを要求する。requireGroupを指定すると家族グループへの参加も必須にする。 */
@@ -38,11 +65,17 @@ export function RequireAuth({
   }
 
   if (!showNav) {
-    return <>{children}</>;
+    return (
+      <div className="min-h-screen">
+        <TopBar />
+        {children}
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen pb-20">
+      <TopBar />
       <main className="mx-auto max-w-2xl px-4 py-6">{children}</main>
       <NavBar />
     </div>
