@@ -6,6 +6,12 @@ export const ITEM_TYPE_LABEL: Record<ItemType, string> = {
   todo: "実施作業",
 };
 
+// 予定は緑、実施作業は黄。カードの左枠とカレンダーの丸印で同じ色を使うため、ここに集約する。
+export const ITEM_TYPE_ACCENT: Record<ItemType, { border: string; dot: string }> = {
+  event: { border: "border-l-green-500", dot: "bg-green-500" },
+  todo: { border: "border-l-amber-400", dot: "bg-amber-400" },
+};
+
 export type Profile = {
   id: string;
   display_name: string;

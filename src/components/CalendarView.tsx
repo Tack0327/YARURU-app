@@ -1,16 +1,24 @@
 "use client";
 
+import { ITEM_TYPE_ACCENT, type ItemType } from "@/types/database";
+
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
+const ALL_ITEM_TYPES: ItemType[] = ["event", "todo"];
 
 export type CalendarDay = {
   dateKey: string;
   dayOfMonth: number;
   isCurrentMonth: boolean;
   isToday: boolean;
-  itemCount: number;
+  types: ItemType[];
 };
 
-export function buildCalendarDays(year: number, month: number, todayKey: string, countByDate: Map<string, number>): CalendarDay[] {
+export function buildCalendarDays(
+  year: number,
+  month: number,
+  todayKey: string,
+  typesByDate: Map<string, Set<ItemType>>
+): CalendarDay[] {
   const firstDayOfMonth = new Date(Date.UTC(year, month, 1));
   const startWeekday = firstDayOfMonth.getUTCDay();
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
@@ -20,23 +28,24 @@ export function buildCalendarDays(year: number, month: number, todayKey: string,
 
   for (let i = 0; i < startWeekday; i += 1) {
     const dayOfMonth = daysInPrevMonth - startWeekday + i + 1;
-    days.push({ dateKey: "", dayOfMonth, isCurrentMonth: false, isToday: false, itemCount: 0 });
+    days.push({ dateKey: "", dayOfMonth, isCurrentMonth: false, isToday: false, types: [] });
   }
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const types = typesByDate.get(dateKey);
     days.push({
       dateKey,
       dayOfMonth: day,
       isCurrentMonth: true,
       isToday: dateKey === todayKey,
-      itemCount: countByDate.get(dateKey) ?? 0,
+      types: types ? ALL_ITEM_TYPES.filter((type) => types.has(type)) : [],
     });
   }
 
   while (days.length % 7 !== 0) {
     const dayOfMonth = days.length - (startWeekday + daysInMonth) + 1;
-    days.push({ dateKey: "", dayOfMonth, isCurrentMonth: false, isToday: false, itemCount: 0 });
+    days.push({ dateKey: "", dayOfMonth, isCurrentMonth: false, isToday: false, types: [] });
   }
 
   return days;
@@ -47,17 +56,17 @@ export function CalendarView({
   month,
   todayKey,
   selectedDateKey,
-  countByDate,
+  typesByDate,
   onSelectDate,
 }: {
   year: number;
   month: number;
   todayKey: string;
   selectedDateKey: string | null;
-  countByDate: Map<string, number>;
+  typesByDate: Map<string, Set<ItemType>>;
   onSelectDate: (dateKey: string) => void;
 }) {
-  const days = buildCalendarDays(year, month, todayKey, countByDate);
+  const days = buildCalendarDays(year, month, todayKey, typesByDate);
 
   return (
     <div>
@@ -86,7 +95,13 @@ export function CalendarView({
             }`}
           >
             <span>{day.dayOfMonth}</span>
-            {day.itemCount > 0 && <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-blue-500" />}
+            {day.types.length > 0 && (
+              <span className="mt-0.5 flex gap-0.5">
+                {day.types.map((type) => (
+                  <span key={type} className={`h-1.5 w-1.5 rounded-full ${ITEM_TYPE_ACCENT[type].dot}`} />
+                ))}
+              </span>
+            )}
           </button>
         ))}
       </div>

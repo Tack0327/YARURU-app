@@ -1,13 +1,7 @@
 import Link from "next/link";
 import { formatDateTimeJst, isOverdue } from "@/lib/dateUtils";
-import { ITEM_TYPE_LABEL, type Item, type ItemType } from "@/types/database";
+import { ITEM_TYPE_ACCENT, ITEM_TYPE_LABEL, type Item } from "@/types/database";
 import { OverdueBadge, StatusBadge } from "./StatusBadge";
-
-// 予定は緑、実施作業は黄色の左枠でカードの種別を一目で区別できるようにする
-const ITEM_TYPE_BORDER_CLASS: Record<ItemType, string> = {
-  event: "border-l-4 border-l-green-500",
-  todo: "border-l-4 border-l-amber-400",
-};
 
 export function ItemCard({ item, assigneeName }: { item: Item; assigneeName?: string }) {
   const overdue = isOverdue(item.due_at, item.status);
@@ -15,7 +9,7 @@ export function ItemCard({ item, assigneeName }: { item: Item; assigneeName?: st
   return (
     <Link
       href={`/items/${item.id}`}
-      className={`block rounded-xl border-y border-r border-gray-200 bg-white p-4 shadow-sm active:bg-gray-50 ${ITEM_TYPE_BORDER_CLASS[item.type]}`}
+      className={`block rounded-xl border-y border-r border-gray-200 bg-white p-4 shadow-sm active:bg-gray-50 border-l-4 ${ITEM_TYPE_ACCENT[item.type].border}`}
     >
       <div className="mb-2 flex items-center gap-2">
         <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">

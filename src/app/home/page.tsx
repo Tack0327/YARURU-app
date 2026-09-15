@@ -10,7 +10,7 @@ import { dateKeyJst, isActiveOnDate, isOverdue } from "@/lib/dateUtils";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { fetchItems, sortItemsForHome } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
-import type { Item } from "@/types/database";
+import type { Item, ItemType } from "@/types/database";
 
 function itemCalendarDateKey(item: Item): string {
   return dateKeyJst(item.due_at) || dateKeyJst(item.start_at);
@@ -48,12 +48,14 @@ function HomeContent() {
     load();
   }, [load]);
 
-  const countByDate = useMemo(() => {
-    const map = new Map<string, number>();
+  const typesByDate = useMemo(() => {
+    const map = new Map<string, Set<ItemType>>();
     for (const item of items ?? []) {
       const key = itemCalendarDateKey(item);
       if (!key) continue;
-      map.set(key, (map.get(key) ?? 0) + 1);
+      const types = map.get(key) ?? new Set<ItemType>();
+      types.add(item.type);
+      map.set(key, types);
     }
     return map;
   }, [items]);
@@ -131,7 +133,7 @@ function HomeContent() {
           month={month}
           todayKey={todayKey}
           selectedDateKey={selectedDateKey}
-          countByDate={countByDate}
+          typesByDate={typesByDate}
           onSelectDate={(dateKey) => setSelectedDateKey((prev) => (prev === dateKey ? null : dateKey))}
         />
       </section>
