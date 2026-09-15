@@ -1,5 +1,13 @@
 export type ItemType = "event" | "todo";
 export type ItemStatus = "not_started" | "in_progress" | "done";
+export type RecurrenceFreq = "daily" | "weekly" | "biweekly" | "monthly";
+
+export const RECURRENCE_FREQ_LABEL: Record<RecurrenceFreq, string> = {
+  daily: "毎日",
+  weekly: "毎週（同じ曜日）",
+  biweekly: "隔週",
+  monthly: "月に一度",
+};
 
 export const ITEM_TYPE_LABEL: Record<ItemType, string> = {
   event: "予定",
@@ -42,6 +50,10 @@ export type Item = {
   description: string | null;
   start_at: string | null;
   due_at: string | null;
+  end_at: string | null;
+  is_all_day: boolean;
+  recurrence_freq: RecurrenceFreq | null;
+  recurrence_group_id: string | null;
   assignee_id: string | null;
   status: ItemStatus;
   created_by: string;

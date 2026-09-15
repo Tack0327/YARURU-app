@@ -7,7 +7,7 @@ import { ItemForm, type ItemFormValues } from "@/components/ItemForm";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
-import { createItem } from "@/lib/items";
+import { createItem, createRecurringItems } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
 
 function NewItemContent() {
@@ -31,16 +31,33 @@ function NewItemContent() {
       if (!group || !user) return;
       setSubmitting(true);
       try {
-        await createItem(supabase, {
+        const baseInput = {
           groupId: group.group.id,
           type: values.type,
           title: values.title,
           description: values.description || null,
           startAt: values.startAt,
           dueAt: values.dueAt,
+          endAt: values.endAt,
+          isAllDay: values.isAllDay,
           assigneeId: values.assigneeId,
           createdBy: user.id,
-        });
+        };
+
+        if (values.recurrence) {
+          await createRecurringItems(
+            supabase,
+            {
+              ...baseInput,
+              startDateKey: values.recurrence.startDateKey,
+              startTime: values.recurrence.startTime,
+              endTime: values.recurrence.endTime,
+            },
+            values.recurrence.freq
+          );
+        } else {
+          await createItem(supabase, baseInput);
+        }
         showToast("登録しました");
         router.replace("/items");
       } catch {

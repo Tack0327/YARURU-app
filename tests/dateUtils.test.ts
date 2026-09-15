@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  combineDateAndTimeJst,
   formatDateTimeJst,
   fromDatetimeLocalValue,
+  generateRecurrenceDateKeys,
   isActiveOnDate,
   isHiddenAfterCompletion,
   isOverdue,
+  timeOfDayJst,
   toDatetimeLocalValue,
 } from "@/lib/dateUtils";
 
@@ -99,6 +102,53 @@ describe("dateUtils", () => {
 
     it("is false when neither start_at nor due_at is set", () => {
       expect(isActiveOnDate(null, null, "2026-06-15")).toBe(false);
+    });
+  });
+
+  describe("timeOfDayJst / combineDateAndTimeJst", () => {
+    it("extracts the JST time of day from an ISO string", () => {
+      expect(timeOfDayJst("2026-06-15T00:30:00.000Z")).toBe("09:30");
+    });
+
+    it("returns an empty string when the input is null", () => {
+      expect(timeOfDayJst(null)).toBe("");
+    });
+
+    it("combines a JST date key and time into an ISO string", () => {
+      expect(combineDateAndTimeJst("2026-06-15", "09:30")).toBe("2026-06-15T00:30:00.000Z");
+    });
+
+    it("defaults to 00:00 when no time is given", () => {
+      expect(combineDateAndTimeJst("2026-06-15", "")).toBe("2026-06-14T15:00:00.000Z");
+    });
+
+    it("returns null when no date is given", () => {
+      expect(combineDateAndTimeJst("", "09:30")).toBeNull();
+    });
+  });
+
+  describe("generateRecurrenceDateKeys", () => {
+    it("generates daily dates for the default 3-month horizon", () => {
+      const keys = generateRecurrenceDateKeys("2026-01-01", "daily");
+      expect(keys[0]).toBe("2026-01-01");
+      expect(keys[1]).toBe("2026-01-02");
+      expect(keys[keys.length - 1]).toBe("2026-04-01");
+      expect(keys).toHaveLength(91);
+    });
+
+    it("generates weekly dates on the same weekday", () => {
+      const keys = generateRecurrenceDateKeys("2026-01-01", "weekly", 1);
+      expect(keys).toEqual(["2026-01-01", "2026-01-08", "2026-01-15", "2026-01-22", "2026-01-29"]);
+    });
+
+    it("generates biweekly dates", () => {
+      const keys = generateRecurrenceDateKeys("2026-01-01", "biweekly", 2);
+      expect(keys).toEqual(["2026-01-01", "2026-01-15", "2026-01-29", "2026-02-12", "2026-02-26"]);
+    });
+
+    it("generates monthly dates on the same day of month", () => {
+      const keys = generateRecurrenceDateKeys("2026-01-15", "monthly", 3);
+      expect(keys).toEqual(["2026-01-15", "2026-02-15", "2026-03-15", "2026-04-15"]);
     });
   });
 });

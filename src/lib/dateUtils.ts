@@ -55,6 +55,18 @@ export function dateKeyJst(iso: string | null): string {
   return toDatetimeLocalValue(iso).slice(0, 10);
 }
 
+/** ISO文字列(UTC)をAsia/Tokyoの時刻「HH:mm」（<input type="time">用）に変換する */
+export function timeOfDayJst(iso: string | null): string {
+  if (!iso) return "";
+  return toDatetimeLocalValue(iso).slice(11);
+}
+
+/** 日付キー「YYYY-MM-DD」と時刻「HH:mm」（ともにAsia/Tokyo基準）を結合してISO文字列(UTC)に変換する */
+export function combineDateAndTimeJst(dateKey: string, time: string): string | null {
+  if (!dateKey) return null;
+  return fromDatetimeLocalValue(`${dateKey}T${time || "00:00"}`);
+}
+
 /**
  * 指定日(dateKey, Asia/Tokyoの「YYYY-MM-DD」)が開始日時〜期限日時の作業期間に含まれるか判定する。
  * 片方しか設定されていない場合は、その日付と一致するかどうかで判定する。
@@ -66,6 +78,46 @@ export function isActiveOnDate(startAtIso: string | null, dueAtIso: string | nul
   if (dueKey) return dueKey === dateKey;
   if (startKey) return startKey === dateKey;
   return false;
+}
+
+const RECURRENCE_HORIZON_MONTHS = 3;
+
+function dateKeyFromUtcDate(date: Date): string {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    date.getUTCDate()
+  ).padStart(2, "0")}`;
+}
+
+/**
+ * 開始日(startDateKey, 「YYYY-MM-DD」)から指定した頻度で、既定の期間（デフォルト3か月）分の
+ * 日付キーの一覧を生成する（繰り返し予定を複数の独立した項目として作成するために使用する）。
+ */
+export function generateRecurrenceDateKeys(
+  startDateKey: string,
+  freq: "daily" | "weekly" | "biweekly" | "monthly",
+  horizonMonths: number = RECURRENCE_HORIZON_MONTHS
+): string[] {
+  const [year, month, day] = startDateKey.split("-").map(Number);
+  const start = new Date(Date.UTC(year, month - 1, day));
+  const endExclusive = new Date(Date.UTC(year, month - 1 + horizonMonths, day));
+
+  const keys: string[] = [];
+
+  if (freq === "monthly") {
+    for (let occurrence = 0; ; occurrence += 1) {
+      const cursor = new Date(Date.UTC(year, month - 1 + occurrence, day));
+      if (cursor.getTime() > endExclusive.getTime()) break;
+      keys.push(dateKeyFromUtcDate(cursor));
+    }
+    return keys;
+  }
+
+  const stepDays = freq === "daily" ? 1 : freq === "weekly" ? 7 : 14;
+  for (let cursor = start; cursor.getTime() <= endExclusive.getTime(); ) {
+    keys.push(dateKeyFromUtcDate(cursor));
+    cursor = new Date(cursor.getTime() + stepDays * 24 * 60 * 60 * 1000);
+  }
+  return keys;
 }
 
 /** 期限超過かどうか（未完了かつ期限が現在時刻より過去） */

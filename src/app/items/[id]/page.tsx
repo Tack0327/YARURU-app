@@ -43,6 +43,8 @@ function ItemDetailContent() {
           description: values.description || null,
           startAt: values.startAt,
           dueAt: values.dueAt,
+          endAt: values.endAt,
+          isAllDay: values.isAllDay,
           assigneeId: values.assigneeId,
           status: values.status,
         });

@@ -27,8 +27,9 @@ YARURU/
 ├── package.json
 ├── supabase/
 │   └── migrations/
-│       ├── 0001_init_schema.sql        # テーブル定義・制約・インデックス
-│       └── 0002_functions_and_rls.sql  # トリガー・RPC関数・RLSポリシー
+│       ├── 0001_init_schema.sql             # テーブル定義・制約・インデックス
+│       ├── 0002_functions_and_rls.sql       # トリガー・RPC関数・RLSポリシー
+│       └── 0003_recurrence_and_allday.sql   # end_at・終日・繰り返し用の列追加
 ├── src/
 │   ├── proxy.ts           # Supabaseセッションの検証・更新（旧middleware）
 │   ├── app/
@@ -53,9 +54,9 @@ YARURU/
 │   │   └── CalendarView.tsx       # home/page.tsxに埋め込むカレンダーウィジェット
 │   ├── lib/
 │   │   ├── supabase/client.ts / server.ts
-│   │   ├── items.ts       # 予定・実施作業のCRUD・検索絞り込み並び替え
+│   │   ├── items.ts       # 予定・実施作業のCRUD・検索絞り込み並び替え・繰り返し一括作成
 │   │   ├── families.ts    # 家族グループの作成・参加・メンバー取得
-│   │   ├── dateUtils.ts   # Asia/Tokyo変換・期限超過・14日非表示判定
+│   │   ├── dateUtils.ts   # Asia/Tokyo変換・期限超過・14日非表示判定・繰り返し日付生成
 │   │   └── notifications.ts # 通知要否の判定（送信処理は将来LINE連携用に未実装）
 │   └── types/database.ts  # Supabaseテーブル・RPCの型定義
 ├── tests/
@@ -71,6 +72,8 @@ YARURU/
 - 予定・実施作業へのアクセスはSupabaseのRLS（行レベルセキュリティ）により「自分が所属する家族グループのメンバーのみ」に制限する。
 - 完了日時の自動設定・解除と `updated_at` の更新は、DBトリガー（`items_before_update`）で一元管理し、クライアント実装に依存させない。
 - 完了から14日経過した項目は削除せず、クエリ条件（`isHiddenAfterCompletion`）で通常一覧から除外し、完了履歴画面からのみ確認できるようにする。
+- 繰り返し予定（毎日・毎週・隔週・月に一度）は、作成時に既定の期間（3か月）分の**独立した項目を一括生成**する方式とする。生成後の各項目は`recurrence_group_id`で緩く紐づくだけで、それぞれ個別に編集・完了・削除できる（シリーズ一括編集・無期限の繰り返しには対応しない）。
+- 予定(event)は単一日のイベントとして扱い、日付＋開始時間＋終了時間で管理する（複数日にまたがる予定は扱わない）。実施作業(todo)は開始日時〜期限日時の期間を持てる。どちらも`is_all_day`で終日（時間未指定）を表現できる。
 - 動作確認は `npm run dev` で開発サーバーを起動して行う。
 
 ## コーディング規約

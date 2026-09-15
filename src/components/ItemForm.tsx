@@ -1,19 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/dateUtils";
+import { combineDateAndTimeJst, dateKeyJst, fromDatetimeLocalValue, timeOfDayJst, toDatetimeLocalValue } from "@/lib/dateUtils";
 import type { MemberWithProfile } from "@/lib/families";
-import { ITEM_TYPE_LABEL, type Item, type ItemStatus, type ItemType } from "@/types/database";
+import {
+  ITEM_TYPE_LABEL,
+  RECURRENCE_FREQ_LABEL,
+  type Item,
+  type ItemStatus,
+  type ItemType,
+  type RecurrenceFreq,
+} from "@/types/database";
 
 export type ItemFormValues = {
   type: ItemType;
   title: string;
   description: string;
+  isAllDay: boolean;
   startAt: string | null;
+  endAt: string | null;
   dueAt: string | null;
   assigneeId: string | null;
   status: ItemStatus;
+  recurrence: { freq: RecurrenceFreq; startDateKey: string; startTime: string; endTime: string } | null;
 };
+
+const RECURRENCE_OPTIONS: RecurrenceFreq[] = ["daily", "weekly", "biweekly", "monthly"];
 
 export function ItemForm({
   members,
@@ -33,10 +45,22 @@ export function ItemForm({
   const [type, setType] = useState<ItemType>(initialItem?.type ?? "todo");
   const [title, setTitle] = useState(initialItem?.title ?? "");
   const [description, setDescription] = useState(initialItem?.description ?? "");
-  const [startAtLocal, setStartAtLocal] = useState(toDatetimeLocalValue(initialItem?.start_at ?? null));
-  const [dueAtLocal, setDueAtLocal] = useState(toDatetimeLocalValue(initialItem?.due_at ?? null));
   const [assigneeId, setAssigneeId] = useState(initialItem?.assignee_id ?? "");
   const [status, setStatus] = useState<ItemStatus>(initialItem?.status ?? "not_started");
+  const [isAllDay, setIsAllDay] = useState(initialItem?.is_all_day ?? false);
+
+  // 予定用（日付・開始時間・終了時間を分けて管理する）
+  const [eventDate, setEventDate] = useState(dateKeyJst(initialItem?.start_at ?? null));
+  const [startTime, setStartTime] = useState(timeOfDayJst(initialItem?.start_at ?? null));
+  const [endTime, setEndTime] = useState(timeOfDayJst(initialItem?.end_at ?? null));
+  const [recurrenceFreq, setRecurrenceFreq] = useState<RecurrenceFreq | "none">("none");
+
+  // 実施作業用（終日でなければ従来通り日時で管理する）
+  const [startAtLocal, setStartAtLocal] = useState(toDatetimeLocalValue(initialItem?.start_at ?? null));
+  const [dueAtLocal, setDueAtLocal] = useState(toDatetimeLocalValue(initialItem?.due_at ?? null));
+  const [startDateOnly, setStartDateOnly] = useState(dateKeyJst(initialItem?.start_at ?? null));
+  const [dueDateOnly, setDueDateOnly] = useState(dateKeyJst(initialItem?.due_at ?? null));
+
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -48,11 +72,48 @@ export function ItemForm({
       return;
     }
 
-    const startAt = fromDatetimeLocalValue(startAtLocal);
-    const dueAt = fromDatetimeLocalValue(dueAtLocal);
+    if (type === "event") {
+      if (!eventDate) {
+        setError("日付を入力してください。");
+        return;
+      }
+      if (!isAllDay && !startTime) {
+        setError("開始時間を入力してください。");
+        return;
+      }
+      if (!isAllDay && endTime && startTime && endTime < startTime) {
+        setError("終了時間は開始時間より後にしてください。");
+        return;
+      }
+
+      const startAt = combineDateAndTimeJst(eventDate, isAllDay ? "00:00" : startTime);
+      const endAt = isAllDay ? null : endTime ? combineDateAndTimeJst(eventDate, endTime) : null;
+      const recurrence =
+        !initialItem && recurrenceFreq !== "none"
+          ? { freq: recurrenceFreq, startDateKey: eventDate, startTime: isAllDay ? "00:00" : startTime, endTime: isAllDay ? "00:00" : endTime }
+          : null;
+
+      await onSubmit({
+        type,
+        title: title.trim(),
+        description: description.trim(),
+        isAllDay,
+        startAt,
+        endAt,
+        dueAt: null,
+        assigneeId: assigneeId || null,
+        status,
+        recurrence,
+      });
+      return;
+    }
+
+    // 実施作業
+    const startAt = isAllDay ? combineDateAndTimeJst(startDateOnly, "00:00") : fromDatetimeLocalValue(startAtLocal);
+    const dueAt = isAllDay ? combineDateAndTimeJst(dueDateOnly, "00:00") : fromDatetimeLocalValue(dueAtLocal);
 
     if (startAt && dueAt && new Date(dueAt).getTime() < new Date(startAt).getTime()) {
-      setError("期限日時は開始日時より後に設定してください。");
+      setError("期限は開始より後に設定してください。");
       return;
     }
 
@@ -60,10 +121,13 @@ export function ItemForm({
       type,
       title: title.trim(),
       description: description.trim(),
+      isAllDay,
       startAt,
+      endAt: null,
       dueAt,
       assigneeId: assigneeId || null,
       status,
+      recurrence: null,
     });
   }
 
@@ -118,32 +182,131 @@ export function ItemForm({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="startAt" className="mb-1 block text-sm font-medium text-gray-700">
-            開始日時
-          </label>
-          <input
-            id="startAt"
-            type="datetime-local"
-            value={startAtLocal}
-            onChange={(e) => setStartAtLocal(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
-          />
+      <label className="flex min-h-10 items-center gap-2 text-sm font-medium text-gray-700">
+        <input
+          type="checkbox"
+          checked={isAllDay}
+          onChange={(e) => setIsAllDay(e.target.checked)}
+          className="h-5 w-5 rounded border-gray-300"
+        />
+        終日（時間を指定しない）
+      </label>
+
+      {type === "event" ? (
+        <>
+          <div>
+            <label htmlFor="eventDate" className="mb-1 block text-sm font-medium text-gray-700">
+              日付
+            </label>
+            <input
+              id="eventDate"
+              type="date"
+              required
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+            />
+          </div>
+
+          {!isAllDay && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="startTime" className="mb-1 block text-sm font-medium text-gray-700">
+                  開始時間
+                </label>
+                <input
+                  id="startTime"
+                  type="time"
+                  required
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="endTime" className="mb-1 block text-sm font-medium text-gray-700">
+                  終了時間
+                </label>
+                <input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+                />
+              </div>
+            </div>
+          )}
+
+          {!initialItem && (
+            <div>
+              <label htmlFor="recurrenceFreq" className="mb-1 block text-sm font-medium text-gray-700">
+                繰り返し
+              </label>
+              <select
+                id="recurrenceFreq"
+                value={recurrenceFreq}
+                onChange={(e) => setRecurrenceFreq(e.target.value as RecurrenceFreq | "none")}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+              >
+                <option value="none">繰り返さない</option>
+                {RECURRENCE_OPTIONS.map((freq) => (
+                  <option key={freq} value={freq}>
+                    {RECURRENCE_FREQ_LABEL[freq]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="startAt" className="mb-1 block text-sm font-medium text-gray-700">
+              開始{isAllDay ? "日" : "日時"}
+            </label>
+            {isAllDay ? (
+              <input
+                id="startAt"
+                type="date"
+                value={startDateOnly}
+                onChange={(e) => setStartDateOnly(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+              />
+            ) : (
+              <input
+                id="startAt"
+                type="datetime-local"
+                value={startAtLocal}
+                onChange={(e) => setStartAtLocal(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+              />
+            )}
+          </div>
+          <div>
+            <label htmlFor="dueAt" className="mb-1 block text-sm font-medium text-gray-700">
+              期限{isAllDay ? "日" : "日時"}
+            </label>
+            {isAllDay ? (
+              <input
+                id="dueAt"
+                type="date"
+                value={dueDateOnly}
+                onChange={(e) => setDueDateOnly(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+              />
+            ) : (
+              <input
+                id="dueAt"
+                type="datetime-local"
+                value={dueAtLocal}
+                onChange={(e) => setDueAtLocal(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+              />
+            )}
+          </div>
         </div>
-        <div>
-          <label htmlFor="dueAt" className="mb-1 block text-sm font-medium text-gray-700">
-            期限日時
-          </label>
-          <input
-            id="dueAt"
-            type="datetime-local"
-            value={dueAtLocal}
-            onChange={(e) => setDueAtLocal(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
-          />
-        </div>
-      </div>
+      )}
 
       <div>
         <label htmlFor="assignee" className="mb-1 block text-sm font-medium text-gray-700">

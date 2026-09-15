@@ -14,6 +14,10 @@ function makeItem(overrides: Partial<Item>): Item {
     description: null,
     start_at: null,
     due_at: null,
+    end_at: null,
+    is_all_day: false,
+    recurrence_freq: null,
+    recurrence_group_id: null,
     assignee_id: null,
     status: "not_started",
     created_by: "user-1",
@@ -59,6 +63,20 @@ describe("sortItemsForHome", () => {
     const sorted = sortItemsForHome([noDueDate, withDueDate], now);
 
     expect(sorted.map((item) => item.id)).toEqual(["with-due", "no-due"]);
+  });
+
+  it("sorts events without a due date by their start date instead", () => {
+    const event = makeItem({
+      id: "event",
+      type: "event",
+      due_at: null,
+      start_at: "2026-06-16T00:00:00.000Z",
+    });
+    const todo = makeItem({ id: "todo", due_at: "2026-06-20T00:00:00.000Z" });
+
+    const sorted = sortItemsForHome([todo, event], now);
+
+    expect(sorted.map((item) => item.id)).toEqual(["event", "todo"]);
   });
 });
 

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Item, ItemStatus, ItemType } from "@/types/database";
-import { isHiddenAfterCompletion, isOverdue } from "./dateUtils";
+import type { Database, Item, ItemStatus, ItemType, RecurrenceFreq } from "@/types/database";
+import { combineDateAndTimeJst, generateRecurrenceDateKeys, isHiddenAfterCompletion, isOverdue } from "./dateUtils";
 
 type Client = SupabaseClient<Database>;
 
@@ -57,8 +57,10 @@ export function sortItemsForHome(items: Item[], now: Date = new Date()): Item[] 
     const bOverdue = isOverdue(b.due_at, b.status, now);
     if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
 
-    const aDue = a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY;
-    const bDue = b.due_at ? new Date(b.due_at).getTime() : Number.POSITIVE_INFINITY;
+    const aTime = a.due_at ?? a.start_at;
+    const bTime = b.due_at ?? b.start_at;
+    const aDue = aTime ? new Date(aTime).getTime() : Number.POSITIVE_INFINITY;
+    const bDue = bTime ? new Date(bTime).getTime() : Number.POSITIVE_INFINITY;
     return aDue - bDue;
   });
 }
@@ -87,27 +89,63 @@ export type NewItemInput = {
   description?: string | null;
   startAt?: string | null;
   dueAt?: string | null;
+  endAt?: string | null;
+  isAllDay?: boolean;
   assigneeId?: string | null;
   createdBy: string;
 };
 
+function toItemInsert(input: NewItemInput): Database["public"]["Tables"]["items"]["Insert"] {
+  return {
+    group_id: input.groupId,
+    type: input.type,
+    title: input.title,
+    description: input.description ?? null,
+    start_at: input.startAt ?? null,
+    due_at: input.dueAt ?? null,
+    end_at: input.endAt ?? null,
+    is_all_day: input.isAllDay ?? false,
+    assignee_id: input.assigneeId ?? null,
+    created_by: input.createdBy,
+  };
+}
+
 export async function createItem(supabase: Client, input: NewItemInput): Promise<Item> {
-  const { data, error } = await supabase
-    .from("items")
-    .insert({
-      group_id: input.groupId,
-      type: input.type,
-      title: input.title,
-      description: input.description ?? null,
-      start_at: input.startAt ?? null,
-      due_at: input.dueAt ?? null,
-      assignee_id: input.assigneeId ?? null,
-      created_by: input.createdBy,
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.from("items").insert(toItemInsert(input)).select().single();
   if (error) throw error;
   return data;
+}
+
+/**
+ * 繰り返し予定を、指定した頻度に沿って複数の独立した項目として一括作成する。
+ * 各項目は同じrecurrence_group_idを持つが、それ以外は完全に独立しており、
+ * 個別に編集・完了・削除できる（シリーズ一括編集には対応しない）。
+ */
+export async function createRecurringItems(
+  supabase: Client,
+  input: NewItemInput & { startDateKey: string; startTime: string; endTime: string },
+  freq: RecurrenceFreq
+): Promise<Item[]> {
+  const dateKeys = generateRecurrenceDateKeys(input.startDateKey, freq);
+  const recurrenceGroupId = crypto.randomUUID();
+
+  const rows = dateKeys.map((dateKey) => {
+    const startAt = input.isAllDay
+      ? combineDateAndTimeJst(dateKey, "00:00")
+      : combineDateAndTimeJst(dateKey, input.startTime);
+    const endAt = input.isAllDay ? null : combineDateAndTimeJst(dateKey, input.endTime);
+    return {
+      ...toItemInsert(input),
+      start_at: startAt,
+      end_at: endAt,
+      recurrence_freq: freq,
+      recurrence_group_id: recurrenceGroupId,
+    };
+  });
+
+  const { data, error } = await supabase.from("items").insert(rows).select();
+  if (error) throw error;
+  return data ?? [];
 }
 
 export type UpdateItemInput = Partial<{
@@ -115,6 +153,8 @@ export type UpdateItemInput = Partial<{
   description: string | null;
   startAt: string | null;
   dueAt: string | null;
+  endAt: string | null;
+  isAllDay: boolean;
   assigneeId: string | null;
   status: ItemStatus;
   type: ItemType;
@@ -126,6 +166,8 @@ export async function updateItem(supabase: Client, itemId: string, input: Update
   if (input.description !== undefined) payload.description = input.description;
   if (input.startAt !== undefined) payload.start_at = input.startAt;
   if (input.dueAt !== undefined) payload.due_at = input.dueAt;
+  if (input.endAt !== undefined) payload.end_at = input.endAt;
+  if (input.isAllDay !== undefined) payload.is_all_day = input.isAllDay;
   if (input.assigneeId !== undefined) payload.assignee_id = input.assigneeId;
   if (input.status !== undefined) payload.status = input.status;
   if (input.type !== undefined) payload.type = input.type;
