@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatDateTimeJst,
   fromDatetimeLocalValue,
+  isActiveOnDate,
   isHiddenAfterCompletion,
   isOverdue,
   toDatetimeLocalValue,
@@ -67,6 +68,37 @@ describe("dateUtils", () => {
 
     it("is true when more than 14 days have passed since completion", () => {
       expect(isHiddenAfterCompletion("done", "2026-01-01T00:00:00.000Z", now)).toBe(true);
+    });
+  });
+
+  describe("isActiveOnDate", () => {
+    it("matches when the date falls within the start~due work period", () => {
+      expect(
+        isActiveOnDate("2026-06-10T00:00:00.000Z", "2026-06-20T00:00:00.000Z", "2026-06-15")
+      ).toBe(true);
+    });
+
+    it("matches the boundary dates of the work period", () => {
+      expect(isActiveOnDate("2026-06-10T00:00:00.000Z", "2026-06-20T00:00:00.000Z", "2026-06-10")).toBe(true);
+      expect(isActiveOnDate("2026-06-10T00:00:00.000Z", "2026-06-20T00:00:00.000Z", "2026-06-20")).toBe(true);
+    });
+
+    it("does not match a date outside the work period", () => {
+      expect(isActiveOnDate("2026-06-10T00:00:00.000Z", "2026-06-20T00:00:00.000Z", "2026-06-21")).toBe(false);
+    });
+
+    it("matches only the due date when start_at is not set", () => {
+      expect(isActiveOnDate(null, "2026-06-15T00:00:00.000Z", "2026-06-15")).toBe(true);
+      expect(isActiveOnDate(null, "2026-06-15T00:00:00.000Z", "2026-06-16")).toBe(false);
+    });
+
+    it("matches only the start date when due_at is not set", () => {
+      expect(isActiveOnDate("2026-06-15T00:00:00.000Z", null, "2026-06-15")).toBe(true);
+      expect(isActiveOnDate("2026-06-15T00:00:00.000Z", null, "2026-06-16")).toBe(false);
+    });
+
+    it("is false when neither start_at nor due_at is set", () => {
+      expect(isActiveOnDate(null, null, "2026-06-15")).toBe(false);
     });
   });
 });

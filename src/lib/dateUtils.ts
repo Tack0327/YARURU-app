@@ -49,6 +49,25 @@ export function fromDatetimeLocalValue(value: string): string | null {
   return new Date(utcMs).toISOString();
 }
 
+/** ISO文字列(UTC)をAsia/Tokyoの日付キー「YYYY-MM-DD」に変換する */
+export function dateKeyJst(iso: string | null): string {
+  if (!iso) return "";
+  return toDatetimeLocalValue(iso).slice(0, 10);
+}
+
+/**
+ * 指定日(dateKey, Asia/Tokyoの「YYYY-MM-DD」)が開始日時〜期限日時の作業期間に含まれるか判定する。
+ * 片方しか設定されていない場合は、その日付と一致するかどうかで判定する。
+ */
+export function isActiveOnDate(startAtIso: string | null, dueAtIso: string | null, dateKey: string): boolean {
+  const startKey = dateKeyJst(startAtIso);
+  const dueKey = dateKeyJst(dueAtIso);
+  if (startKey && dueKey) return startKey <= dateKey && dateKey <= dueKey;
+  if (dueKey) return dueKey === dateKey;
+  if (startKey) return startKey === dateKey;
+  return false;
+}
+
 /** 期限超過かどうか（未完了かつ期限が現在時刻より過去） */
 export function isOverdue(dueAtIso: string | null, status: string, now: Date = new Date()): boolean {
   if (!dueAtIso || status === "done") return false;

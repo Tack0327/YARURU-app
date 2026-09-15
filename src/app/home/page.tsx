@@ -6,19 +6,14 @@ import { useAuth } from "@/components/AuthProvider";
 import { CalendarView } from "@/components/CalendarView";
 import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
-import { formatDateTimeJst, isOverdue } from "@/lib/dateUtils";
+import { dateKeyJst, isActiveOnDate, isOverdue } from "@/lib/dateUtils";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { fetchItems, sortItemsForHome } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
 import type { Item } from "@/types/database";
 
-function jstDateKey(iso: string | null): string {
-  if (!iso) return "";
-  return formatDateTimeJst(iso).slice(0, 10);
-}
-
 function itemCalendarDateKey(item: Item): string {
-  return jstDateKey(item.due_at) || jstDateKey(item.start_at);
+  return dateKeyJst(item.due_at) || dateKeyJst(item.start_at);
 }
 
 function HomeContent() {
@@ -29,7 +24,7 @@ function HomeContent() {
   const [error, setError] = useState<string | null>(null);
 
   const now = new Date();
-  const todayKey = jstDateKey(now.toISOString());
+  const todayKey = dateKeyJst(now.toISOString());
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
@@ -93,13 +88,15 @@ function HomeContent() {
 
   const overdueItems = sortItemsForHome(items.filter((item) => isOverdue(item.due_at, item.status, now)));
   const todayItems = sortItemsForHome(
-    items.filter((item) => !isOverdue(item.due_at, item.status, now) && jstDateKey(item.due_at) === todayKey)
+    items.filter(
+      (item) => !isOverdue(item.due_at, item.status, now) && isActiveOnDate(item.start_at, item.due_at, todayKey)
+    )
   );
   const upcomingItems = sortItemsForHome(
     items.filter(
       (item) =>
         !isOverdue(item.due_at, item.status, now) &&
-        jstDateKey(item.due_at) !== todayKey &&
+        !isActiveOnDate(item.start_at, item.due_at, todayKey) &&
         item.status !== "done"
     )
   );
@@ -161,7 +158,7 @@ function HomeContent() {
 
       <Section title="期限超過" items={overdueItems} emptyText="期限超過の項目はありません" memberNameOf={memberNameOf} />
       <Section
-        title="今日の作業"
+        title="今日の予定"
         items={todayItems}
         emptyText="今日の予定・実施作業はありません"
         memberNameOf={memberNameOf}
