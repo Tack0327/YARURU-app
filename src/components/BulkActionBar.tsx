@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { MemberWithProfile } from "@/lib/families";
 
 /** 一括変更の「担当者なしにする」を表す特別値（空文字は「変更しない」と区別するため） */
@@ -11,9 +12,11 @@ export function BulkActionBar({
   assigneeId,
   status,
   submitting,
+  deleting,
   onAssigneeChange,
   onStatusChange,
   onApply,
+  onDelete,
   onCancel,
 }: {
   selectedCount: number;
@@ -21,11 +24,50 @@ export function BulkActionBar({
   assigneeId: string;
   status: string;
   submitting: boolean;
+  deleting: boolean;
   onAssigneeChange: (value: string) => void;
   onStatusChange: (value: string) => void;
   onApply: () => void;
+  onDelete: () => void | Promise<void>;
   onCancel: () => void;
 }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  async function handleConfirmDelete() {
+    await onDelete();
+    setConfirmingDelete(false);
+  }
+
+  if (confirmingDelete) {
+    return (
+      <div className="fixed inset-x-0 bottom-14 z-40 border-t border-red-200 bg-red-50">
+        <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
+          <p className="flex-1 text-sm font-semibold text-red-900">
+            選択した{selectedCount}件を削除しますか？この操作は取り消せません。
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(false)}
+              disabled={deleting}
+              className="min-h-10 flex-1 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-600 disabled:opacity-50 sm:flex-none"
+            >
+              キャンセル
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="min-h-10 flex-1 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white disabled:opacity-50 sm:flex-none"
+            >
+              {deleting ? "削除中..." : "削除する"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-x-0 bottom-14 z-40 border-t border-blue-200 bg-blue-50">
       <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
@@ -67,8 +109,16 @@ export function BulkActionBar({
           </button>
           <button
             type="button"
+            onClick={() => setConfirmingDelete(true)}
+            disabled={submitting || deleting}
+            className="min-h-10 flex-1 rounded-lg border border-red-300 px-4 text-sm font-semibold text-red-600 disabled:opacity-50 sm:flex-none"
+          >
+            まとめて削除
+          </button>
+          <button
+            type="button"
             onClick={onApply}
-            disabled={submitting || (!assigneeId && !status)}
+            disabled={submitting || deleting || (!assigneeId && !status)}
             className="min-h-10 flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50 sm:flex-none"
           >
             {submitting ? "変更中..." : "まとめて変更"}

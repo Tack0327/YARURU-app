@@ -182,6 +182,13 @@ export async function deleteItem(supabase: Client, itemId: string): Promise<void
   if (error) throw error;
 }
 
+/** 一覧で選択した複数項目をまとめて削除する */
+export async function bulkDeleteItems(supabase: Client, itemIds: string[]): Promise<void> {
+  if (itemIds.length === 0) return;
+  const { error } = await supabase.from("items").delete().in("id", itemIds);
+  if (error) throw error;
+}
+
 export type BulkUpdateItemInput = Partial<{
   assigneeId: string | null;
   status: ItemStatus;

@@ -9,7 +9,7 @@ import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
-import { bulkUpdateItems, fetchItems, type ItemFilters } from "@/lib/items";
+import { bulkDeleteItems, bulkUpdateItems, fetchItems, type ItemFilters } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
 import type { Item, ItemStatus } from "@/types/database";
 
@@ -27,6 +27,7 @@ function ItemsContent() {
   const [bulkAssigneeId, setBulkAssigneeId] = useState("");
   const [bulkStatus, setBulkStatus] = useState("");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!group) return;
@@ -87,6 +88,20 @@ function ItemsContent() {
       showToast("まとめて変更できませんでした。もう一度お試しください。", "error");
     } finally {
       setBulkSubmitting(false);
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    setBulkDeleting(true);
+    try {
+      await bulkDeleteItems(supabase, [...selectedIds]);
+      showToast(`${selectedIds.size}件をまとめて削除しました`);
+      await load();
+    } catch {
+      showToast("まとめて削除できませんでした。もう一度お試しください。", "error");
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -152,9 +167,11 @@ function ItemsContent() {
           assigneeId={bulkAssigneeId}
           status={bulkStatus}
           submitting={bulkSubmitting}
+          deleting={bulkDeleting}
           onAssigneeChange={setBulkAssigneeId}
           onStatusChange={setBulkStatus}
           onApply={handleBulkApply}
+          onDelete={handleBulkDelete}
           onCancel={() => setSelectedIds(new Set())}
         />
       )}
