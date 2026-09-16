@@ -111,14 +111,18 @@ YARURU/
 
 - 本番URL：https://yaruru-app.vercel.app/
 - Supabaseプロジェクト名：YARURU
-- Vercelの「Git push時の自動デプロイ」は無効化している（Settings → Build and Deployment → Ignored Build Step で「Don't build anything」を選択済み）。
-- 本番への反映は、Vercelの「Deploy Hook」（Settings → Git → Deploy Hooks、`main`ブランチ向けに発行）を手動で叩く方式のみで行う。
-- Deploy HookのURLは `.env.local` の `VERCEL_DEPLOY_HOOK_URL` に保存する（第三者がURLを知るだけで本番デプロイを実行できるため、絶対にGitにコミットしない・チャットにも貼らない）。
-- **コードをGitHubにpushした後は、必ず「本番環境にデプロイしますか？」とユーザーに確認すること。** 「デプロイして」等の明確な依頼があった場合のみ、次のコマンドで本番デプロイを実行する：
-  ```
-  bash -c 'set -a; source .env.local; curl -sf --ssl-no-revoke -X POST "$VERCEL_DEPLOY_HOOK_URL"'
-  ```
-  （社内ネットワークの証明書失効確認でcurlの通信がエラーになるため、Windows環境では`--ssl-no-revoke`が必要）
+- Vercelの「Git push時の自動デプロイ」は使わない方針（Production BranchはVercel側の初期設定のまま`main`だが、`git push`が本番に反映されるわけではなく、下記のVercel CLIによる明示的デプロイのみで本番を更新する）。
+- 本番への反映は、**Vercel CLI (`vercel --prod`) による手動デプロイのみ**で行う（Deploy Hookや専用ブランチは使わない。過去にIgnored Build Step・Deploy Hook・Production Branch分離を試したが、Deploy HookがIgnored Build Stepの影響を受けて機能しない等の問題があったため、この方式に統一した）。
+- ローカル環境は `vercel link` 済み（`tack0327/yaruru-app` に紐付け）。
+- 社内ネットワークではNode.js/curlのTLS証明書失効確認でエラーになるため、Vercel CLIを実行する際は環境変数 `NODE_OPTIONS="--use-system-ca"` を付与すること。
+- **コードをGitHubにpushした後は、会話が途中でリセットされていても必ず次の手順を踏むこと（省略しない）：**
+  1. `npm run dev` で開発サーバーを起動する（既に起動中ならそれを使う）。
+  2. 起動ログに出る開発環境のURL（例: `http://localhost:3000`）をリンクとしてユーザーに提示し、動作確認を依頼する。
+  3. ユーザーから問題ない旨の返答があったら、**「本番環境にデプロイしますか？」と確認する。**
+  4. 「デプロイして」等の明確な依頼があった場合のみ、次のコマンドで本番デプロイを実行する：
+     ```
+     NODE_OPTIONS="--use-system-ca" vercel --prod
+     ```
 
 ## 回答言語
 
