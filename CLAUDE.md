@@ -111,6 +111,14 @@ YARURU/
 
 - 本番URL：https://yaruru-app.vercel.app/
 - Supabaseプロジェクト名：YARURU
+- Vercelの「Git push時の自動デプロイ」は無効化している（Settings → Build and Deployment → Ignored Build Step で「Don't build anything」を選択済み）。
+- 本番への反映は、Vercelの「Deploy Hook」（Settings → Git → Deploy Hooks、`main`ブランチ向けに発行）を手動で叩く方式のみで行う。
+- Deploy HookのURLは `.env.local` の `VERCEL_DEPLOY_HOOK_URL` に保存する（第三者がURLを知るだけで本番デプロイを実行できるため、絶対にGitにコミットしない・チャットにも貼らない）。
+- **コードをGitHubにpushした後は、必ず「本番環境にデプロイしますか？」とユーザーに確認すること。** 「デプロイして」等の明確な依頼があった場合のみ、次のコマンドで本番デプロイを実行する：
+  ```
+  bash -c 'set -a; source .env.local; curl -sf --ssl-no-revoke -X POST "$VERCEL_DEPLOY_HOOK_URL"'
+  ```
+  （社内ネットワークの証明書失効確認でcurlの通信がエラーになるため、Windows環境では`--ssl-no-revoke`が必要）
 
 ## 回答言語
 
