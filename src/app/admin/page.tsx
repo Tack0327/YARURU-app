@@ -6,6 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { deleteAccount, fetchAllAccounts, fetchAllGroups } from "@/lib/admin";
+import { toErrorMessage } from "@/lib/errors";
 import { deleteFamilyGroup } from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
 import type { AdminAccount, FamilyGroup } from "@/types/database";
@@ -101,8 +102,8 @@ function AdminContent() {
         return;
       }
       await load();
-    } catch {
-      showToast("削除に失敗しました。もう一度お試しください。", "error");
+    } catch (err) {
+      showToast(toErrorMessage(err, "削除に失敗しました。もう一度お試しください。"), "error");
     } finally {
       setDeletingId(null);
       setConfirmingDeleteAccountId(null);

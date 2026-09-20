@@ -115,6 +115,12 @@ export async function fetchGroupMembersForGroups(supabase: Client, groupIds: str
   return attachProfiles(supabase, members ?? []);
 }
 
+/** 管理者(owner)を、同じグループの他のメンバーへ委譲する（現在の管理者本人、またはスーパー管理者のみ実行可能） */
+export async function transferGroupOwnership(supabase: Client, groupId: string, newOwnerId: string): Promise<void> {
+  const { error } = await supabase.rpc("transfer_group_ownership", { p_group_id: groupId, p_new_owner_id: newOwnerId });
+  if (error) throw error;
+}
+
 /** 家族グループを削除する（グループのowner、またはスーパー管理者のみ実行可能）。関連するチケット・メンバーも連鎖削除される */
 export async function deleteFamilyGroup(supabase: Client, groupId: string): Promise<void> {
   const { error } = await supabase.rpc("delete_family_group", { p_group_id: groupId });

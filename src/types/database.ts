@@ -116,6 +116,7 @@ export type Database = {
       list_all_accounts: { Args: Record<string, never>; Returns: AdminAccount[] };
       delete_family_group: { Args: { p_group_id: string }; Returns: undefined };
       set_default_group: { Args: { p_group_id: string | null }; Returns: undefined };
+      transfer_group_ownership: { Args: { p_group_id: string; p_new_owner_id: string }; Returns: undefined };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

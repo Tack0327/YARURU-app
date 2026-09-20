@@ -7,12 +7,14 @@ import { useAuth } from "@/components/AuthProvider";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { deleteAccount } from "@/lib/admin";
+import { toErrorMessage } from "@/lib/errors";
 import {
   deleteFamilyGroup,
   fetchGroupMembers,
   leaveFamilyGroup,
   regenerateInviteCode,
   removeFamilyMember,
+  transferGroupOwnership,
   type MemberWithProfile,
 } from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
@@ -33,8 +35,18 @@ function SettingsContent() {
   const [savingDefaultGroup, setSavingDefaultGroup] = useState(false);
   const [leavingGroup, setLeavingGroup] = useState(false);
   const [confirmingLeaveGroup, setConfirmingLeaveGroup] = useState(false);
+  const [transferringId, setTransferringId] = useState<string | null>(null);
+  const [confirmingTransferId, setConfirmingTransferId] = useState<string | null>(null);
+  const [accountDeleteError, setAccountDeleteError] = useState<string | null>(null);
 
   const isOwner = group?.role === "owner";
+
+  // 退会できなかった理由を、ボタンの近くにしばらく表示する（トーストは消えるのが早く見逃しやすいため）
+  useEffect(() => {
+    if (!accountDeleteError) return;
+    const timer = setTimeout(() => setAccountDeleteError(null), 8000);
+    return () => clearTimeout(timer);
+  }, [accountDeleteError]);
 
   const loadMembers = useCallback(() => {
     if (!group) return;
@@ -80,10 +92,26 @@ function SettingsContent() {
       await removeFamilyMember(supabase, group.group.id, profileId);
       showToast("メンバーを削除しました");
       loadMembers();
-    } catch {
-      showToast("削除に失敗しました。もう一度お試しください。", "error");
+    } catch (err) {
+      showToast(toErrorMessage(err, "削除に失敗しました。もう一度お試しください。"), "error");
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  async function handleTransferOwnership(profileId: string, displayName: string) {
+    if (!group) return;
+    setTransferringId(profileId);
+    try {
+      await transferGroupOwnership(supabase, group.group.id, profileId);
+      showToast(`${displayName}さんを管理者にしました`);
+      await refreshGroup();
+      loadMembers();
+    } catch (err) {
+      showToast(toErrorMessage(err, "管理者の変更に失敗しました。もう一度お試しください。"), "error");
+    } finally {
+      setTransferringId(null);
+      setConfirmingTransferId(null);
     }
   }
 
@@ -123,8 +151,8 @@ function SettingsContent() {
       await refreshGroup();
       showToast("グループから脱退しました");
       router.replace("/home");
-    } catch {
-      showToast("脱退に失敗しました。もう一度お試しください。", "error");
+    } catch (err) {
+      showToast(toErrorMessage(err, "脱退に失敗しました。もう一度お試しください。"), "error");
     } finally {
       setLeavingGroup(false);
       setConfirmingLeaveGroup(false);
@@ -134,12 +162,13 @@ function SettingsContent() {
   async function handleDeleteAccount() {
     if (!user) return;
     setDeletingAccount(true);
+    setAccountDeleteError(null);
     try {
       await deleteAccount(supabase, user.id);
       await signOut();
       router.replace("/login");
-    } catch {
-      showToast("削除に失敗しました。もう一度お試しください。", "error");
+    } catch (err) {
+      setAccountDeleteError(toErrorMessage(err, "削除に失敗しました。もう一度お試しください。"));
       setDeletingAccount(false);
       setConfirmingDeleteAccount(false);
     }
@@ -272,6 +301,11 @@ function SettingsContent() {
               </>
             )}
           </div>
+          {members.length > 1 && (
+            <p className="mt-2 text-xs text-gray-400">
+              グループを残したまま脱退したい場合は、下のメンバー一覧から別のメンバーを管理者にしてください。
+            </p>
+          )}
         </section>
       )}
 
@@ -321,23 +355,60 @@ function SettingsContent() {
         {error && <p className="text-sm text-red-600">{error}</p>}
         <ul className="flex flex-col gap-2">
           {members.map((member) => (
-            <li key={member.id} className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
-              <span className="text-sm text-gray-900">
-                {member.profile.display_name}
-                {member.profile_id === user?.id && <span className="ml-1 text-xs text-gray-400">(自分)</span>}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">{member.role === "owner" ? "作成者" : "メンバー"}</span>
-                {isOwner && member.profile_id !== user?.id && (
-                  <button
-                    onClick={() => handleRemoveMember(member.profile_id, member.profile.display_name)}
-                    disabled={removingId === member.profile_id}
-                    className="min-h-8 rounded-lg border border-red-300 px-3 text-xs font-semibold text-red-600 disabled:opacity-50"
-                  >
-                    {removingId === member.profile_id ? "削除中..." : "削除"}
-                  </button>
-                )}
-              </div>
+            <li key={member.id} className="rounded-lg border border-gray-200 px-4 py-3">
+              {confirmingTransferId === member.profile_id ? (
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-semibold text-blue-700">
+                    {member.profile.display_name}さんを管理者にしますか？あなたは一般メンバーになります。
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingTransferId(null)}
+                      disabled={transferringId === member.profile_id}
+                      className="min-h-9 flex-1 rounded-lg border border-gray-300 text-xs font-semibold text-gray-600 disabled:opacity-50"
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleTransferOwnership(member.profile_id, member.profile.display_name)}
+                      disabled={transferringId === member.profile_id}
+                      className="min-h-9 flex-1 rounded-lg bg-blue-600 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      {transferringId === member.profile_id ? "変更中..." : "管理者にする"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-900">
+                    {member.profile.display_name}
+                    {member.profile_id === user?.id && <span className="ml-1 text-xs text-gray-400">(自分)</span>}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">{member.role === "owner" ? "管理者" : "メンバー"}</span>
+                    {isOwner && member.profile_id !== user?.id && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingTransferId(member.profile_id)}
+                          className="min-h-8 rounded-lg border border-blue-300 px-3 text-xs font-semibold text-blue-600"
+                        >
+                          管理者にする
+                        </button>
+                        <button
+                          onClick={() => handleRemoveMember(member.profile_id, member.profile.display_name)}
+                          disabled={removingId === member.profile_id}
+                          className="min-h-8 rounded-lg border border-red-300 px-3 text-xs font-semibold text-red-600 disabled:opacity-50"
+                        >
+                          {removingId === member.profile_id ? "削除中..." : "削除"}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -346,6 +417,9 @@ function SettingsContent() {
       <section>
         <h2 className="mb-2 text-sm font-bold text-gray-500">アカウント</h2>
         <div className="rounded-lg border border-red-300 p-4">
+          {accountDeleteError && (
+            <p className="mb-3 text-sm font-semibold text-red-700">{accountDeleteError}</p>
+          )}
           {confirmingDeleteAccount ? (
             <div className="flex flex-col gap-3">
               <p className="text-sm font-semibold text-red-700">
