@@ -1,26 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { BulkActionBar, BULK_UNASSIGN_VALUE } from "@/components/BulkActionBar";
 import { FilterBar } from "@/components/FilterBar";
 import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
+import { fetchAllGroups } from "@/lib/admin";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { bulkDeleteItems, bulkUpdateItems, fetchItems, type ItemFilters } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
-import type { Item, ItemStatus } from "@/types/database";
+import type { FamilyGroup, Item, ItemStatus } from "@/types/database";
 
 function ItemsContent() {
-  const { group } = useAuth();
+  const { groups: myGroups, isSuperAdmin } = useAuth();
   const { showToast } = useToast();
   const [supabase] = useState(() => createClient());
   const [items, setItems] = useState<Item[] | null>(null);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [filters, setFilters] = useState<ItemFilters>({});
   const [error, setError] = useState<string | null>(null);
+  const [allGroupsForAdmin, setAllGroupsForAdmin] = useState<FamilyGroup[] | null>(null);
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -29,27 +31,44 @@ function ItemsContent() {
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    fetchAllGroups(supabase)
+      .then(setAllGroupsForAdmin)
+      .catch(() => setAllGroupsForAdmin(null));
+  }, [isSuperAdmin, supabase]);
+
+  // スーパー管理者は自分の所属に関わらず全ての家族グループのチケットを対象にする
+  const groups = useMemo<FamilyGroup[]>(
+    () => (isSuperAdmin && allGroupsForAdmin ? allGroupsForAdmin : myGroups.map((g) => g.group)),
+    [isSuperAdmin, allGroupsForAdmin, myGroups]
+  );
+
   const load = useCallback(async () => {
-    if (!group) return;
+    if (groups.length === 0) return;
     setError(null);
+    const groupIds = filters.groupId ? [filters.groupId] : groups.map((g) => g.id);
     try {
-      const [fetchedItems, fetchedMembers] = await Promise.all([
-        fetchItems(supabase, group.group.id, filters),
-        fetchGroupMembers(supabase, group.group.id),
+      const [fetchedItems, memberLists] = await Promise.all([
+        fetchItems(supabase, groupIds, filters),
+        Promise.all(groupIds.map((id) => fetchGroupMembers(supabase, id))),
       ]);
+      const memberMap = new Map<string, MemberWithProfile>();
+      memberLists.flat().forEach((m) => memberMap.set(m.profile_id, m));
       setItems(fetchedItems);
-      setMembers(fetchedMembers);
+      setMembers([...memberMap.values()]);
       setSelectedIds(new Set());
     } catch {
       setError("一覧の取得に失敗しました。通信状況をご確認のうえ再度お試しください。");
     }
-  }, [supabase, group, filters]);
+  }, [supabase, groups, filters]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const memberNameOf = (id: string | null) => members.find((m) => m.profile_id === id)?.profile.display_name;
+  const groupNameOf = (groupId: string) => groups.find((g) => g.id === groupId)?.name;
 
   function handleToggleSelectionMode() {
     setSelectionMode((prev) => !prev);
@@ -126,7 +145,7 @@ function ItemsContent() {
         </div>
       </div>
 
-      <FilterBar filters={filters} members={members} onChange={setFilters} />
+      <FilterBar filters={filters} members={members} groups={groups} onChange={setFilters} />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -151,6 +170,7 @@ function ItemsContent() {
                 key={item.id}
                 item={item}
                 assigneeName={memberNameOf(item.assignee_id)}
+                groupName={groups.length > 1 ? groupNameOf(item.group_id) : undefined}
                 selectionMode={selectionMode}
                 selected={selectedIds.has(item.id)}
                 onToggleSelect={() => handleToggleSelect(item.id)}

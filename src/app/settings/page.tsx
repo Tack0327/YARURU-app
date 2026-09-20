@@ -18,7 +18,7 @@ import { createClient } from "@/lib/supabase/client";
 
 function SettingsContent() {
   const router = useRouter();
-  const { user, group, groups, selectGroup, refreshGroup, signOut } = useAuth();
+  const { user, group, groups, selectGroup, defaultGroupId, setDefaultGroup, refreshGroup, signOut } = useAuth();
   const { showToast } = useToast();
   const [supabase] = useState(() => createClient());
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
@@ -29,6 +29,7 @@ function SettingsContent() {
   const [deletingGroup, setDeletingGroup] = useState(false);
   const [confirmingDeleteGroup, setConfirmingDeleteGroup] = useState(false);
   const [confirmingDeleteAccount, setConfirmingDeleteAccount] = useState(false);
+  const [savingDefaultGroup, setSavingDefaultGroup] = useState(false);
 
   const isOwner = group?.role === "owner";
 
@@ -80,6 +81,18 @@ function SettingsContent() {
       showToast("削除に失敗しました。もう一度お試しください。", "error");
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  async function handleChangeDefaultGroup(groupId: string) {
+    setSavingDefaultGroup(true);
+    try {
+      await setDefaultGroup(groupId || null);
+      showToast("ログイン後に表示する家族を設定しました");
+    } catch {
+      showToast("設定に失敗しました。もう一度お試しください。", "error");
+    } finally {
+      setSavingDefaultGroup(false);
     }
   }
 
@@ -151,6 +164,26 @@ function SettingsContent() {
           </Link>
         </div>
       </section>
+
+      {groups.length > 0 && (
+        <section>
+          <h2 className="mb-2 text-sm font-bold text-gray-500">ログイン後に表示する家族</h2>
+          <select
+            value={defaultGroupId ?? ""}
+            onChange={(e) => handleChangeDefaultGroup(e.target.value)}
+            disabled={savingDefaultGroup}
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500 disabled:opacity-50"
+          >
+            <option value="">指定しない（最後に見ていた家族を表示）</option>
+            {groups.map((g) => (
+              <option key={g.group.id} value={g.group.id}>
+                {g.group.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-400">次回ログイン時に、まずこの家族の画面が表示されます。</p>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-2 text-sm font-bold text-gray-500">招待コード（{group?.group.name}）</h2>

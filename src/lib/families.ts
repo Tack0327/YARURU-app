@@ -8,6 +8,24 @@ export type MyGroupInfo = {
   role: FamilyMember["role"];
 };
 
+/** 自分のプロフィール（ログイン後に表示する家族グループの設定を含む）を取得する */
+export async function fetchMyProfile(supabase: Client): Promise<Profile | null> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  const user = userData.user;
+  if (!user) return null;
+
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** ログイン後に最初に表示する家族グループを設定する（未設定に戻す場合はnullを渡す） */
+export async function updateDefaultGroup(supabase: Client, profileId: string, groupId: string | null): Promise<void> {
+  const { error } = await supabase.from("profiles").update({ default_group_id: groupId }).eq("id", profileId);
+  if (error) throw error;
+}
+
 /** 自分が所属している全ての家族グループを取得する（1人が複数グループに所属できる） */
 export async function fetchMyGroups(supabase: Client): Promise<MyGroupInfo[]> {
   const { data: userData, error: userError } = await supabase.auth.getUser();

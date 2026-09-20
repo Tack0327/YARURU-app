@@ -23,6 +23,7 @@ export const ITEM_TYPE_ACCENT: Record<ItemType, { border: string; dot: string }>
 export type Profile = {
   id: string;
   display_name: string;
+  default_group_id: string | null;
   created_at: string;
 };
 

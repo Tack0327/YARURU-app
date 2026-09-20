@@ -21,12 +21,14 @@ function scheduleText(item: Item): string | null {
 export function ItemCard({
   item,
   assigneeName,
+  groupName,
   selectionMode = false,
   selected = false,
   onToggleSelect,
 }: {
   item: Item;
   assigneeName?: string;
+  groupName?: string;
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
@@ -66,6 +68,7 @@ export function ItemCard({
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
         {schedule && <span>{schedule}</span>}
         {assigneeName && <span>担当: {assigneeName}</span>}
+        {groupName && <span>家族: {groupName}</span>}
       </div>
     </>
   );

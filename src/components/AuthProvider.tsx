@@ -3,7 +3,7 @@
 import type { User } from "@supabase/supabase-js";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { checkIsSuperAdmin } from "@/lib/admin";
-import { fetchMyGroups, type MyGroupInfo } from "@/lib/families";
+import { fetchMyGroups, fetchMyProfile, updateDefaultGroup, type MyGroupInfo } from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
 import type { FamilyGroup } from "@/types/database";
 
@@ -16,6 +16,10 @@ type AuthContextValue = {
   /** 自分が所属している全ての家族グループ */
   groups: MyGroupInfo[];
   selectGroup: (groupId: string) => void;
+  /** ログイン後に最初に表示する家族グループのID（未設定ならnull） */
+  defaultGroupId: string | null;
+  /** ログイン後に最初に表示する家族グループを設定する */
+  setDefaultGroup: (groupId: string | null) => Promise<void>;
   isSuperAdmin: boolean;
   /** スーパー管理者が、自分が所属していないグループを一時的に閲覧・操作する */
   viewGroupAsAdmin: (group: FamilyGroup) => void;
@@ -36,15 +40,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(
     () => (typeof window !== "undefined" && window.localStorage.getItem(SELECTED_GROUP_STORAGE_KEY)) || null
   );
+  const [defaultGroupId, setDefaultGroupId] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [adminViewGroup, setAdminViewGroup] = useState<FamilyGroup | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadGroups = useCallback(async () => {
     try {
-      const [list, superAdmin] = await Promise.all([fetchMyGroups(supabase), checkIsSuperAdmin(supabase)]);
+      const [list, superAdmin, profile] = await Promise.all([
+        fetchMyGroups(supabase),
+        checkIsSuperAdmin(supabase),
+        fetchMyProfile(supabase),
+      ]);
       setGroups(list);
       setIsSuperAdmin(superAdmin);
+      const defaultId = profile?.default_group_id ?? null;
+      setDefaultGroupId(defaultId);
+
+      // このブラウザでまだ何も選択していない場合（ログイン直後など）は、
+      // 設定済みのデフォルトグループを初期表示に使う
+      setSelectedGroupId((prev) => {
+        if (prev) return prev;
+        if (defaultId && list.some((g) => g.group.id === defaultId)) {
+          if (typeof window !== "undefined") window.localStorage.setItem(SELECTED_GROUP_STORAGE_KEY, defaultId);
+          return defaultId;
+        }
+        return prev;
+      });
     } catch {
       setGroups([]);
       setIsSuperAdmin(false);
@@ -85,6 +107,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") window.localStorage.setItem(SELECTED_GROUP_STORAGE_KEY, groupId);
   }, []);
 
+  const setDefaultGroup = useCallback(
+    async (groupId: string | null) => {
+      if (!user) return;
+      await updateDefaultGroup(supabase, user.id, groupId);
+      setDefaultGroupId(groupId);
+    },
+    [supabase, user]
+  );
+
   const viewGroupAsAdmin = useCallback((targetGroup: FamilyGroup) => {
     setAdminViewGroup(targetGroup);
   }, []);
@@ -105,6 +136,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setGroups([]);
     setIsSuperAdmin(false);
     setAdminViewGroup(null);
+    // 次回ログイン時にデフォルトの家族グループへ戻れるよう、このブラウザでの選択状態をクリアする
+    setSelectedGroupId(null);
+    if (typeof window !== "undefined") window.localStorage.removeItem(SELECTED_GROUP_STORAGE_KEY);
   }, [supabase]);
 
   return (
@@ -114,6 +148,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         group,
         groups,
         selectGroup,
+        defaultGroupId,
+        setDefaultGroup,
         isSuperAdmin,
         viewGroupAsAdmin,
         exitAdminView,

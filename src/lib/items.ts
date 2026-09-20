@@ -9,6 +9,8 @@ export type SortDirection = "asc" | "desc";
 
 export type ItemFilters = {
   keyword?: string;
+  /** 特定の家族グループに絞り込む場合に指定する（未指定時はfetchItemsに渡した全グループが対象） */
+  groupId?: string;
   assigneeId?: string;
   type?: ItemType;
   status?: ItemStatus;
@@ -31,11 +33,12 @@ function toOrFilterValue(likePattern: string): string {
 
 export async function fetchItems(
   supabase: Client,
-  groupId: string,
+  groupIds: string | string[],
   filters: ItemFilters = {},
   options: { includeCompletedHistory?: boolean } = {}
 ): Promise<Item[]> {
-  let query = supabase.from("items").select("*").eq("group_id", groupId);
+  let query = supabase.from("items").select("*");
+  query = Array.isArray(groupIds) ? query.in("group_id", groupIds) : query.eq("group_id", groupIds);
 
   if (filters.keyword) {
     const keyword = toOrFilterValue(`%${escapeLikePattern(filters.keyword)}%`);

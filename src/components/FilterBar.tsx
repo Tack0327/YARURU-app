@@ -2,14 +2,17 @@
 
 import type { ItemFilters, SortDirection, SortField } from "@/lib/items";
 import type { MemberWithProfile } from "@/lib/families";
+import type { FamilyGroup } from "@/types/database";
 
 export function FilterBar({
   filters,
   members,
+  groups,
   onChange,
 }: {
   filters: ItemFilters;
   members: MemberWithProfile[];
+  groups?: FamilyGroup[];
   onChange: (filters: ItemFilters) => void;
 }) {
   return (
@@ -22,6 +25,21 @@ export function FilterBar({
         className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
         aria-label="キーワードで検索"
       />
+      {groups && groups.length > 1 && (
+        <select
+          value={filters.groupId ?? ""}
+          onChange={(e) => onChange({ ...filters, groupId: e.target.value || undefined })}
+          className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
+          aria-label="家族で絞り込み"
+        >
+          <option value="">家族: すべて</option>
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+      )}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <select
           value={filters.type ?? ""}
