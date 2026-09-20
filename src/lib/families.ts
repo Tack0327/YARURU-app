@@ -115,6 +115,20 @@ export async function fetchGroupMembersForGroups(supabase: Client, groupIds: str
   return attachProfiles(supabase, members ?? []);
 }
 
+/**
+ * 渡したグループのうち、自分ひとりだけが所属しているグループのIDを返す。
+ * アカウント削除（退会）時に「このグループも同時に削除される」という警告を出すために使う。
+ */
+export async function fetchSoleMemberGroupIds(supabase: Client, groupIds: string[]): Promise<string[]> {
+  if (groupIds.length === 0) return [];
+  const { data, error } = await supabase.from("family_members").select("group_id").in("group_id", groupIds);
+  if (error) throw error;
+
+  const counts = new Map<string, number>();
+  (data ?? []).forEach((m) => counts.set(m.group_id, (counts.get(m.group_id) ?? 0) + 1));
+  return groupIds.filter((id) => (counts.get(id) ?? 0) <= 1);
+}
+
 /** 管理者(owner)を、同じグループの他のメンバーへ委譲する（現在の管理者本人、またはスーパー管理者のみ実行可能） */
 export async function transferGroupOwnership(supabase: Client, groupId: string, newOwnerId: string): Promise<void> {
   const { error } = await supabase.rpc("transfer_group_ownership", { p_group_id: groupId, p_new_owner_id: newOwnerId });

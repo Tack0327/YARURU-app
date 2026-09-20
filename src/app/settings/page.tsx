@@ -11,6 +11,7 @@ import { toErrorMessage } from "@/lib/errors";
 import {
   deleteFamilyGroup,
   fetchGroupMembers,
+  fetchSoleMemberGroupIds,
   leaveFamilyGroup,
   regenerateInviteCode,
   removeFamilyMember,
@@ -38,6 +39,7 @@ function SettingsContent() {
   const [transferringId, setTransferringId] = useState<string | null>(null);
   const [confirmingTransferId, setConfirmingTransferId] = useState<string | null>(null);
   const [accountDeleteError, setAccountDeleteError] = useState<string | null>(null);
+  const [soleMemberGroupNames, setSoleMemberGroupNames] = useState<string[]>([]);
 
   const isOwner = group?.role === "owner";
 
@@ -47,6 +49,20 @@ function SettingsContent() {
     const timer = setTimeout(() => setAccountDeleteError(null), 8000);
     return () => clearTimeout(timer);
   }, [accountDeleteError]);
+
+  // 自分ひとりだけが所属している家族グループは、退会と同時に削除されるため、確認画面で警告するために調べておく
+  useEffect(() => {
+    if (groups.length === 0) {
+      setSoleMemberGroupNames([]);
+      return;
+    }
+    fetchSoleMemberGroupIds(supabase, groups.map((g) => g.group.id))
+      .then((ids) => {
+        const idSet = new Set(ids);
+        setSoleMemberGroupNames(groups.filter((g) => idSet.has(g.group.id)).map((g) => g.group.name));
+      })
+      .catch(() => setSoleMemberGroupNames([]));
+  }, [supabase, groups]);
 
   const loadMembers = useCallback(() => {
     if (!group) return;
@@ -425,6 +441,12 @@ function SettingsContent() {
               <p className="text-sm font-semibold text-red-700">
                 アカウントを削除しますか？所属している全ての家族グループから抜け、この操作は取り消せません。
               </p>
+              {soleMemberGroupNames.length > 0 && (
+                <p className="text-sm font-semibold text-red-700">
+                  あなたが唯一のメンバーである次の家族グループも、アカウントと同時に削除されます：
+                  {soleMemberGroupNames.join("、")}
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   type="button"
