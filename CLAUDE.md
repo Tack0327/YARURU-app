@@ -144,8 +144,9 @@ YARURU/
   3. ユーザーから問題ない旨の返答があったら、**「本番環境にデプロイしますか？」と確認する。**
   4. 「デプロイして」等の明確な依頼があった場合のみ、次のコマンドで本番デプロイを実行する：
      ```
-     NODE_OPTIONS="--use-system-ca" vercel --prod
+     for i in 1 2 3; do NODE_OPTIONS="--use-system-ca" vercel --prod && break; echo "再試行 $i/3..."; sleep 3; done
      ```
+     （`vercel --prod`は`"Not authorized"`という一時的なエラーで失敗することがあるが、CLIの認証状態自体には問題がなく、同じコマンドをそのまま再実行すれば成功する。そのため上記のように自動で数回リトライする。3回とも失敗した場合のみユーザーに報告する。）
 
 ## 回答言語
 
