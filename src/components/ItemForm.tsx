@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { applyEnterContinuation, applyListPrefix, parseChecklistLine, toggleTaskLine, type ListPrefixKind } from "@/lib/checklist";
 import { combineDateAndTimeJst, dateKeyJst, fromDatetimeLocalValue, timeOfDayJst, toDatetimeLocalValue } from "@/lib/dateUtils";
 import type { MemberWithProfile } from "@/lib/families";
 import {
@@ -62,6 +63,32 @@ export function ItemForm({
   const [dueDateOnly, setDueDateOnly] = useState(dateKeyJst(initialItem?.due_at ?? null));
 
   const [error, setError] = useState<string | null>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  function handleApplyListPrefix(kind: ListPrefixKind) {
+    const el = descriptionRef.current;
+    const cursorPos = el ? el.selectionStart : description.length;
+    const result = applyListPrefix(description, cursorPos, kind);
+    setDescription(result.text);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(result.cursorPos, result.cursorPos);
+    });
+  }
+
+  function handleDescriptionKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key !== "Enter") return;
+    const el = e.currentTarget;
+    const result = applyEnterContinuation(description, el.selectionStart);
+    if (!result) return;
+
+    e.preventDefault();
+    setDescription(result.text);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(result.cursorPos, result.cursorPos);
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -178,13 +205,87 @@ export function ItemForm({
         <label htmlFor="description" className="mb-1 block text-sm font-medium text-gray-700">
           詳細
         </label>
+        <div className="mb-2 flex gap-2">
+          <button
+            type="button"
+            onClick={() => handleApplyListPrefix("bullet")}
+            className="min-h-9 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-600"
+          >
+            ・箇条書き
+          </button>
+          <button
+            type="button"
+            onClick={() => handleApplyListPrefix("numbered")}
+            className="min-h-9 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-600"
+          >
+            1. 番号
+          </button>
+          <button
+            type="button"
+            onClick={() => handleApplyListPrefix("task")}
+            className="min-h-9 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-600"
+          >
+            ☑ タスク
+          </button>
+        </div>
         <textarea
           id="description"
-          rows={3}
+          ref={descriptionRef}
+          rows={4}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          onKeyDown={handleDescriptionKeyDown}
           className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
         />
+        {description.trim() && (
+          <div className="mt-2 flex flex-col gap-1 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            {description.split("\n").map((line, index) => {
+              const parsed = parseChecklistLine(line);
+
+              if (parsed.kind === "task") {
+                return (
+                  <label key={index} className="flex items-start gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={parsed.checked}
+                      onChange={() => setDescription((prev) => toggleTaskLine(prev, index))}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300"
+                    />
+                    <span className={parsed.checked ? "text-gray-400 line-through" : "text-gray-700"}>
+                      {parsed.text}
+                    </span>
+                  </label>
+                );
+              }
+
+              if (parsed.kind === "bullet") {
+                return (
+                  <p key={index} className="flex gap-2 text-sm text-gray-700">
+                    <span aria-hidden>・</span>
+                    <span>{parsed.text}</span>
+                  </p>
+                );
+              }
+
+              if (parsed.kind === "numbered") {
+                return (
+                  <p key={index} className="flex gap-2 text-sm text-gray-700">
+                    <span aria-hidden>{parsed.number}.</span>
+                    <span>{parsed.text}</span>
+                  </p>
+                );
+              }
+
+              return line.trim() ? (
+                <p key={index} className="text-sm text-gray-700">
+                  {line}
+                </p>
+              ) : (
+                <div key={index} className="h-2" />
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <label className="flex min-h-10 items-center gap-2 text-sm font-medium text-gray-700">
