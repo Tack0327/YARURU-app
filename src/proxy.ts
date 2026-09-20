@@ -27,6 +27,8 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// login・signupは未ログイン状態で使う画面で、そもそもセッションの検証・更新が不要なため対象から除外する
+// （毎回Supabaseへの往復が発生し、ログイン画面の表示・ログイン処理そのものを遅くしていたため）
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|login|signup|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };
