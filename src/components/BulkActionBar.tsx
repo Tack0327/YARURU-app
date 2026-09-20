@@ -13,6 +13,7 @@ export function BulkActionBar({
   status,
   submitting,
   deleting,
+  allowAssigneeChange = true,
   onAssigneeChange,
   onStatusChange,
   onApply,
@@ -25,6 +26,8 @@ export function BulkActionBar({
   status: string;
   submitting: boolean;
   deleting: boolean;
+  /** falseの場合、担当者の一括変更を無効にする（複数の家族グループを横断表示している場合など） */
+  allowAssigneeChange?: boolean;
   onAssigneeChange: (value: string) => void;
   onStatusChange: (value: string) => void;
   onApply: () => void;
@@ -76,16 +79,19 @@ export function BulkActionBar({
           <select
             value={assigneeId}
             onChange={(e) => onAssigneeChange(e.target.value)}
-            className="rounded-lg border border-gray-300 px-2 py-2 text-sm"
+            disabled={!allowAssigneeChange}
+            title={allowAssigneeChange ? undefined : "家族を1つに絞り込むと担当者を一括変更できます"}
+            className="rounded-lg border border-gray-300 px-2 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-400"
             aria-label="担当者をまとめて変更"
           >
-            <option value="">担当者: 変更しない</option>
-            <option value={BULK_UNASSIGN_VALUE}>担当者なしにする</option>
-            {members.map((member) => (
-              <option key={member.profile_id} value={member.profile_id}>
-                {member.profile.display_name}
-              </option>
-            ))}
+            <option value="">{allowAssigneeChange ? "担当者: 変更しない" : "担当者: 家族を絞り込むと変更可能"}</option>
+            {allowAssigneeChange && <option value={BULK_UNASSIGN_VALUE}>担当者なしにする</option>}
+            {allowAssigneeChange &&
+              members.map((member) => (
+                <option key={member.profile_id} value={member.profile_id}>
+                  {member.profile.display_name}
+                </option>
+              ))}
           </select>
           <select
             value={status}

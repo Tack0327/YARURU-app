@@ -22,6 +22,7 @@ export function ItemCard({
   item,
   assigneeName,
   groupName,
+  overdue: overdueOverride,
   selectionMode = false,
   selected = false,
   onToggleSelect,
@@ -29,11 +30,13 @@ export function ItemCard({
   item: Item;
   assigneeName?: string;
   groupName?: string;
+  /** 指定すると期限超過バッジの表示・非表示をステータスに関わらず強制する（一覧の分類とバッジ表示を一致させたい場合に使う） */
+  overdue?: boolean;
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
 }) {
-  const overdue = isOverdue(item.due_at, item.status);
+  const overdue = overdueOverride ?? isOverdue(item.due_at, item.status);
   const schedule = scheduleText(item);
 
   const className = `block rounded-xl border-y border-r border-gray-200 bg-white p-4 shadow-sm border-l-4 ${ITEM_TYPE_ACCENT[item.type].border} ${

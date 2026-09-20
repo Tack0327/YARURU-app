@@ -2,7 +2,6 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@/components/AuthProvider";
 import { ItemForm, type ItemFormValues } from "@/components/ItemForm";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
@@ -14,7 +13,6 @@ import type { Item } from "@/types/database";
 function ItemDetailContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { group } = useAuth();
   const { showToast } = useToast();
   const [supabase] = useState(() => createClient());
   const [item, setItem] = useState<Item | null | undefined>(undefined);
@@ -24,14 +22,18 @@ function ItemDetailContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!group) return;
-    Promise.all([fetchItem(supabase, params.id), fetchGroupMembers(supabase, group.group.id)])
-      .then(([fetchedItem, fetchedMembers]) => {
+    // 担当者候補は「今表示中のグループ」ではなく、必ずこのチケット自身が属するグループのメンバーにする
+    // （複数グループを横断表示できるチケット一覧から開いた場合に、無関係な家族が候補に出るのを防ぐ）
+    fetchItem(supabase, params.id)
+      .then(async (fetchedItem) => {
         setItem(fetchedItem);
-        setMembers(fetchedMembers);
+        if (fetchedItem) {
+          const fetchedMembers = await fetchGroupMembers(supabase, fetchedItem.group_id);
+          setMembers(fetchedMembers);
+        }
       })
       .catch(() => setError("データの取得に失敗しました。"));
-  }, [supabase, group, params.id]);
+  }, [supabase, params.id]);
 
   const handleSubmit = useCallback(
     async (values: ItemFormValues) => {

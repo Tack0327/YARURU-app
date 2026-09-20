@@ -1,28 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/components/AuthProvider";
+import { useCallback, useEffect, useState } from "react";
 import { BulkActionBar, BULK_UNASSIGN_VALUE } from "@/components/BulkActionBar";
 import { FilterBar } from "@/components/FilterBar";
 import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
-import { fetchAllGroups } from "@/lib/admin";
+import { useSelectableGroups } from "@/hooks/useSelectableGroups";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { bulkDeleteItems, bulkUpdateItems, fetchItems, type ItemFilters } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
-import type { FamilyGroup, Item, ItemStatus } from "@/types/database";
+import type { Item, ItemStatus } from "@/types/database";
 
 function ItemsContent() {
-  const { groups: myGroups, isSuperAdmin } = useAuth();
+  const groups = useSelectableGroups();
   const { showToast } = useToast();
   const [supabase] = useState(() => createClient());
   const [items, setItems] = useState<Item[] | null>(null);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [filters, setFilters] = useState<ItemFilters>({});
   const [error, setError] = useState<string | null>(null);
-  const [allGroupsForAdmin, setAllGroupsForAdmin] = useState<FamilyGroup[] | null>(null);
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -31,18 +29,13 @@ function ItemsContent() {
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!isSuperAdmin) return;
-    fetchAllGroups(supabase)
-      .then(setAllGroupsForAdmin)
-      .catch(() => setAllGroupsForAdmin(null));
-  }, [isSuperAdmin, supabase]);
+  // 複数の家族グループを横断表示している間は、担当者の一括変更を許可しない
+  // （別グループのメンバーを担当者に設定できてしまうため。家族を1つに絞り込んだ場合のみ許可する）
+  const allowBulkAssigneeChange = groups.length <= 1 || !!filters.groupId;
 
-  // スーパー管理者は自分の所属に関わらず全ての家族グループのチケットを対象にする
-  const groups = useMemo<FamilyGroup[]>(
-    () => (isSuperAdmin && allGroupsForAdmin ? allGroupsForAdmin : myGroups.map((g) => g.group)),
-    [isSuperAdmin, allGroupsForAdmin, myGroups]
-  );
+  useEffect(() => {
+    if (!allowBulkAssigneeChange) setBulkAssigneeId("");
+  }, [allowBulkAssigneeChange]);
 
   const load = useCallback(async () => {
     if (groups.length === 0) return;
@@ -188,6 +181,7 @@ function ItemsContent() {
           status={bulkStatus}
           submitting={bulkSubmitting}
           deleting={bulkDeleting}
+          allowAssigneeChange={allowBulkAssigneeChange}
           onAssigneeChange={setBulkAssigneeId}
           onStatusChange={setBulkStatus}
           onApply={handleBulkApply}

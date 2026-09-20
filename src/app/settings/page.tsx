@@ -10,6 +10,7 @@ import { deleteAccount } from "@/lib/admin";
 import {
   deleteFamilyGroup,
   fetchGroupMembers,
+  leaveFamilyGroup,
   regenerateInviteCode,
   removeFamilyMember,
   type MemberWithProfile,
@@ -30,6 +31,8 @@ function SettingsContent() {
   const [confirmingDeleteGroup, setConfirmingDeleteGroup] = useState(false);
   const [confirmingDeleteAccount, setConfirmingDeleteAccount] = useState(false);
   const [savingDefaultGroup, setSavingDefaultGroup] = useState(false);
+  const [leavingGroup, setLeavingGroup] = useState(false);
+  const [confirmingLeaveGroup, setConfirmingLeaveGroup] = useState(false);
 
   const isOwner = group?.role === "owner";
 
@@ -109,6 +112,22 @@ function SettingsContent() {
     } finally {
       setDeletingGroup(false);
       setConfirmingDeleteGroup(false);
+    }
+  }
+
+  async function handleLeaveGroup() {
+    if (!group) return;
+    setLeavingGroup(true);
+    try {
+      await leaveFamilyGroup(supabase, group.group.id);
+      await refreshGroup();
+      showToast("グループから脱退しました");
+      router.replace("/home");
+    } catch {
+      showToast("脱退に失敗しました。もう一度お試しください。", "error");
+    } finally {
+      setLeavingGroup(false);
+      setConfirmingLeaveGroup(false);
     }
   }
 
@@ -251,6 +270,47 @@ function SettingsContent() {
                   このグループの予定・実施作業・メンバー情報がすべて削除されます。取り消せません。
                 </p>
               </>
+            )}
+          </div>
+        </section>
+      )}
+
+      {!isOwner && group && (
+        <section>
+          <h2 className="mb-2 text-sm font-bold text-gray-500">危険な操作</h2>
+          <div className="rounded-lg border border-red-300 p-4">
+            {confirmingLeaveGroup ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm font-semibold text-red-700">
+                  「{group.group.name}」から脱退しますか？このグループの予定・実施作業は閲覧できなくなります。
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingLeaveGroup(false)}
+                    disabled={leavingGroup}
+                    className="min-h-10 flex-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-600 disabled:opacity-50"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLeaveGroup}
+                    disabled={leavingGroup}
+                    className="min-h-10 flex-1 rounded-lg bg-red-600 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {leavingGroup ? "脱退中..." : "脱退する"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingLeaveGroup(true)}
+                className="min-h-12 w-full text-base font-semibold text-red-600"
+              >
+                {`「${group.group.name}」から脱退する`}
+              </button>
             )}
           </div>
         </section>

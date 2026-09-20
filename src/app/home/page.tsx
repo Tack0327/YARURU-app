@@ -6,12 +6,12 @@ import { useAuth } from "@/components/AuthProvider";
 import { CalendarView } from "@/components/CalendarView";
 import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
-import { fetchAllGroups } from "@/lib/admin";
+import { useSelectableGroups } from "@/hooks/useSelectableGroups";
 import { dateKeyJst, isActiveOnDate, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { fetchItems, sortItemsForHome } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
-import type { FamilyGroup, Item, ItemType } from "@/types/database";
+import type { Item, ItemType } from "@/types/database";
 
 function itemCalendarDateKey(item: Item): string {
   return dateKeyJst(item.due_at) || dateKeyJst(item.start_at);
@@ -30,25 +30,12 @@ const UPCOMING_RANGE_OPTIONS: { value: UpcomingRange; label: string }[] = [
 ];
 
 function HomeContent() {
-  const { group, groups, selectGroup, isSuperAdmin, viewGroupAsAdmin } = useAuth();
+  const { group, groups, selectGroup, viewGroupAsAdmin } = useAuth();
   const [supabase] = useState(() => createClient());
   const [items, setItems] = useState<Item[] | null>(null);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [allGroupsForAdmin, setAllGroupsForAdmin] = useState<FamilyGroup[] | null>(null);
-
-  useEffect(() => {
-    if (!isSuperAdmin) return;
-    fetchAllGroups(supabase)
-      .then(setAllGroupsForAdmin)
-      .catch(() => setAllGroupsForAdmin(null));
-  }, [isSuperAdmin, supabase]);
-
-  // スーパー管理者は自分の所属に関わらず全ての家族グループから選択できるようにする
-  const selectableGroups = useMemo<FamilyGroup[]>(
-    () => (isSuperAdmin && allGroupsForAdmin ? allGroupsForAdmin : groups.map((g) => g.group)),
-    [isSuperAdmin, allGroupsForAdmin, groups]
-  );
+  const selectableGroups = useSelectableGroups();
 
   function handleSelectGroup(groupId: string) {
     const isOwnGroup = groups.some((g) => g.group.id === groupId);
@@ -142,6 +129,7 @@ function HomeContent() {
       (item) =>
         !isPastDue(item, now) &&
         !isActiveOnDate(item.start_at, item.due_at, todayKey) &&
+        itemCalendarDateKey(item) >= todayKey &&
         itemCalendarDateKey(item) <= upcomingRangeEnd
     )
   );
@@ -228,7 +216,13 @@ function HomeContent() {
         </section>
       )}
 
-      <Section title="期限超過" items={overdueItems} emptyText="期限超過の項目はありません" memberNameOf={memberNameOf} />
+      <Section
+        title="期限超過"
+        items={overdueItems}
+        emptyText="期限超過の項目はありません"
+        memberNameOf={memberNameOf}
+        forceOverdue
+      />
       <Section
         title="今日の予定"
         items={todayItems}
@@ -275,11 +269,14 @@ function Section({
   items,
   emptyText,
   memberNameOf,
+  forceOverdue = false,
 }: {
   title: string;
   items: Item[];
   emptyText: string;
   memberNameOf: (id: string | null) => string | undefined;
+  /** trueの場合、そのセクション内の全項目に「期限超過」バッジを表示する（完了済みでも一覧に出す欄で、表示の一貫性を保つため） */
+  forceOverdue?: boolean;
 }) {
   return (
     <section>
@@ -289,7 +286,12 @@ function Section({
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((item) => (
-            <ItemCard key={item.id} item={item} assigneeName={memberNameOf(item.assignee_id)} />
+            <ItemCard
+              key={item.id}
+              item={item}
+              assigneeName={memberNameOf(item.assignee_id)}
+              overdue={forceOverdue ? true : undefined}
+            />
           ))}
         </div>
       )}

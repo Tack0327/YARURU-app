@@ -61,6 +61,12 @@ export async function removeFamilyMember(supabase: Client, groupId: string, prof
   if (error) throw error;
 }
 
+/** 自分自身がグループから脱退する（ownerは脱退できない） */
+export async function leaveFamilyGroup(supabase: Client, groupId: string): Promise<void> {
+  const { error } = await supabase.rpc("leave_family_group", { p_group_id: groupId });
+  if (error) throw error;
+}
+
 export async function createFamilyGroup(supabase: Client, name: string): Promise<FamilyGroup> {
   const { data, error } = await supabase.rpc("create_family_group", { p_name: name });
   if (error) throw error;
