@@ -10,6 +10,8 @@ import { deleteFamilyGroup } from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
 import type { AdminAccount, FamilyGroup } from "@/types/database";
 
+const PAGE_SIZE = 20;
+
 function AdminContent() {
   const router = useRouter();
   const { user, isSuperAdmin, viewGroupAsAdmin, signOut } = useAuth();
@@ -22,6 +24,21 @@ function AdminContent() {
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
   const [confirmingDeleteGroupId, setConfirmingDeleteGroupId] = useState<string | null>(null);
   const [confirmingDeleteAccountId, setConfirmingDeleteAccountId] = useState<string | null>(null);
+  const [groupSearch, setGroupSearch] = useState("");
+  const [accountSearch, setAccountSearch] = useState("");
+  const [visibleGroupCount, setVisibleGroupCount] = useState(PAGE_SIZE);
+  const [visibleAccountCount, setVisibleAccountCount] = useState(PAGE_SIZE);
+
+  const filteredGroups = (groups ?? []).filter((g) => {
+    const q = groupSearch.trim().toLowerCase();
+    if (!q) return true;
+    return g.name.toLowerCase().includes(q) || g.invite_code.toLowerCase().includes(q);
+  });
+  const filteredAccounts = (accounts ?? []).filter((a) => {
+    const q = accountSearch.trim().toLowerCase();
+    if (!q) return true;
+    return a.display_name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
+  });
 
   const load = useCallback(async () => {
     setError(null);
@@ -102,12 +119,23 @@ function AdminContent() {
       {error && <p className="whitespace-pre-line text-sm text-red-600">{error}</p>}
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-gray-500">全ての家族グループ</h2>
+        <h2 className="mb-2 text-sm font-bold text-gray-500">全ての家族グループ（{filteredGroups.length}件）</h2>
         {!groups ? (
           <p className="text-sm text-gray-400">読み込み中...</p>
         ) : (
-          <ul className="flex flex-col gap-2">
-            {groups.map((g) => (
+          <>
+            <input
+              type="text"
+              value={groupSearch}
+              onChange={(e) => {
+                setGroupSearch(e.target.value);
+                setVisibleGroupCount(PAGE_SIZE);
+              }}
+              placeholder="グループ名・招待コードで検索"
+              className="mb-2 min-h-9 w-full rounded-lg border border-gray-300 px-3 text-sm"
+            />
+            <ul className="flex flex-col gap-2">
+              {filteredGroups.slice(0, visibleGroupCount).map((g) => (
               <li key={g.id} className="rounded-lg border border-gray-200 px-4 py-3">
                 {confirmingDeleteGroupId === g.id ? (
                   <div className="flex flex-col gap-2">
@@ -158,18 +186,39 @@ function AdminContent() {
                   </div>
                 )}
               </li>
-            ))}
-          </ul>
+              ))}
+            </ul>
+            {visibleGroupCount < filteredGroups.length && (
+              <button
+                type="button"
+                onClick={() => setVisibleGroupCount((c) => c + PAGE_SIZE)}
+                className="mt-2 min-h-9 w-full rounded-lg border border-gray-300 text-xs font-semibold text-gray-600"
+              >
+                もっと見る（残り{filteredGroups.length - visibleGroupCount}件）
+              </button>
+            )}
+          </>
         )}
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-gray-500">全てのアカウント</h2>
+        <h2 className="mb-2 text-sm font-bold text-gray-500">全てのアカウント（{filteredAccounts.length}件）</h2>
         {!accounts ? (
           <p className="text-sm text-gray-400">読み込み中...</p>
         ) : (
-          <ul className="flex flex-col gap-2">
-            {accounts.map((account) => (
+          <>
+            <input
+              type="text"
+              value={accountSearch}
+              onChange={(e) => {
+                setAccountSearch(e.target.value);
+                setVisibleAccountCount(PAGE_SIZE);
+              }}
+              placeholder="表示名・メールアドレスで検索"
+              className="mb-2 min-h-9 w-full rounded-lg border border-gray-300 px-3 text-sm"
+            />
+            <ul className="flex flex-col gap-2">
+              {filteredAccounts.slice(0, visibleAccountCount).map((account) => (
               <li key={account.id} className="rounded-lg border border-gray-200 px-4 py-3">
                 {confirmingDeleteAccountId === account.id ? (
                   <div className="flex flex-col gap-2">
@@ -214,8 +263,18 @@ function AdminContent() {
                   </div>
                 )}
               </li>
-            ))}
-          </ul>
+              ))}
+            </ul>
+            {visibleAccountCount < filteredAccounts.length && (
+              <button
+                type="button"
+                onClick={() => setVisibleAccountCount((c) => c + PAGE_SIZE)}
+                className="mt-2 min-h-9 w-full rounded-lg border border-gray-300 text-xs font-semibold text-gray-600"
+              >
+                もっと見る（残り{filteredAccounts.length - visibleAccountCount}件）
+              </button>
+            )}
+          </>
         )}
       </section>
     </div>

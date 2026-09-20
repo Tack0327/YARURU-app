@@ -9,6 +9,31 @@ function LoadingScreen() {
   return <div className="flex min-h-screen items-center justify-center text-gray-500">読み込み中...</div>;
 }
 
+function GroupsErrorScreen({ message }: { message: string }) {
+  const { refreshGroup } = useAuth();
+  const [retrying, setRetrying] = useState(false);
+
+  async function handleRetry() {
+    setRetrying(true);
+    await refreshGroup();
+    setRetrying(false);
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+      <p className="text-sm text-red-600">{message}</p>
+      <button
+        type="button"
+        onClick={handleRetry}
+        disabled={retrying}
+        className="min-h-10 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-600 disabled:opacity-50"
+      >
+        {retrying ? "再読み込み中..." : "再読み込み"}
+      </button>
+    </div>
+  );
+}
+
 function TopBar() {
   const { user, group, isAdminViewing, exitAdminView, signOut } = useAuth();
   const router = useRouter();
@@ -63,8 +88,12 @@ export function RequireAuth({
   requireGroup?: boolean;
   showNav?: boolean;
 }) {
-  const { user, group, loading } = useAuth();
+  const { user, group, groupsError, loading } = useAuth();
   const router = useRouter();
+
+  // 家族グループが無いことが確定している場合のみ新規作成へ誘導する。
+  // 一時的な取得エラーの場合は、所属グループが無いと誤解させないようエラー表示に留める（groupsErrorの説明を参照）
+  const shouldRedirectToNewGroup = requireGroup && !group && !groupsError;
 
   useEffect(() => {
     if (loading) return;
@@ -72,13 +101,17 @@ export function RequireAuth({
       router.replace("/login");
       return;
     }
-    if (requireGroup && !group) {
+    if (shouldRedirectToNewGroup) {
       router.replace("/groups/new");
     }
-  }, [loading, user, group, requireGroup, router]);
+  }, [loading, user, shouldRedirectToNewGroup, router]);
 
-  if (loading || !user || (requireGroup && !group)) {
+  if (loading || !user) {
     return <LoadingScreen />;
+  }
+
+  if (requireGroup && !group) {
+    return groupsError ? <GroupsErrorScreen message={groupsError} /> : <LoadingScreen />;
   }
 
   if (!showNav) {

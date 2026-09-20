@@ -8,7 +8,7 @@ import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { useSelectableGroups } from "@/hooks/useSelectableGroups";
-import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
+import { fetchGroupMembersForGroups, type MemberWithProfile } from "@/lib/families";
 import { bulkDeleteItems, bulkUpdateItems, fetchItems, type ItemFilters } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
 import type { Item, ItemStatus } from "@/types/database";
@@ -42,12 +42,12 @@ function ItemsContent() {
     setError(null);
     const groupIds = filters.groupId ? [filters.groupId] : groups.map((g) => g.id);
     try {
-      const [fetchedItems, memberLists] = await Promise.all([
+      const [fetchedItems, memberList] = await Promise.all([
         fetchItems(supabase, groupIds, filters),
-        Promise.all(groupIds.map((id) => fetchGroupMembers(supabase, id))),
+        fetchGroupMembersForGroups(supabase, groupIds),
       ]);
       const memberMap = new Map<string, MemberWithProfile>();
-      memberLists.flat().forEach((m) => memberMap.set(m.profile_id, m));
+      memberList.forEach((m) => memberMap.set(m.profile_id, m));
       setItems(fetchedItems);
       setMembers([...memberMap.values()]);
       setSelectedIds(new Set());

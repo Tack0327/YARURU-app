@@ -19,9 +19,12 @@ export async function fetchMyProfile(supabase: Client, userId: string): Promise<
   return data;
 }
 
-/** ログイン後に最初に表示する家族グループを設定する（未設定に戻す場合はnullを渡す） */
-export async function updateDefaultGroup(supabase: Client, profileId: string, groupId: string | null): Promise<void> {
-  const { error } = await supabase.from("profiles").update({ default_group_id: groupId }).eq("id", profileId);
+/**
+ * ログイン後に最初に表示する家族グループを設定する（未設定に戻す場合はnullを渡す）。
+ * RPC経由にすることで、所属していないグループIDが設定されないようDB側でも検証する。
+ */
+export async function updateDefaultGroup(supabase: Client, groupId: string | null): Promise<void> {
+  const { error } = await supabase.rpc("set_default_group", { p_group_id: groupId });
   if (error) throw error;
 }
 
@@ -81,12 +84,10 @@ export async function joinFamilyGroup(supabase: Client, inviteCode: string): Pro
 
 export type MemberWithProfile = FamilyMember & { profile: Profile };
 
-export async function fetchGroupMembers(supabase: Client, groupId: string): Promise<MemberWithProfile[]> {
-  const { data: members, error } = await supabase.from("family_members").select("*").eq("group_id", groupId);
-  if (error) throw error;
-  if (!members || members.length === 0) return [];
+async function attachProfiles(supabase: Client, members: FamilyMember[]): Promise<MemberWithProfile[]> {
+  if (members.length === 0) return [];
 
-  const profileIds = members.map((m) => m.profile_id);
+  const profileIds = [...new Set(members.map((m) => m.profile_id))];
   const { data: profiles, error: profileError } = await supabase.from("profiles").select("*").in("id", profileIds);
   if (profileError) throw profileError;
 
@@ -94,6 +95,24 @@ export async function fetchGroupMembers(supabase: Client, groupId: string): Prom
   return members
     .filter((m) => profileMap.has(m.profile_id))
     .map((m) => ({ ...m, profile: profileMap.get(m.profile_id)! }));
+}
+
+export async function fetchGroupMembers(supabase: Client, groupId: string): Promise<MemberWithProfile[]> {
+  const { data: members, error } = await supabase.from("family_members").select("*").eq("group_id", groupId);
+  if (error) throw error;
+  return attachProfiles(supabase, members ?? []);
+}
+
+/**
+ * 複数グループのメンバーを1回のクエリでまとめて取得する。
+ * グループ数だけfetchGroupMembersを呼ぶと、グループ数が多い場合（スーパー管理者が全グループを見る場合など）に
+ * N+1クエリとなり遅くなるため、一覧画面での複数グループ表示時はこちらを使う。
+ */
+export async function fetchGroupMembersForGroups(supabase: Client, groupIds: string[]): Promise<MemberWithProfile[]> {
+  if (groupIds.length === 0) return [];
+  const { data: members, error } = await supabase.from("family_members").select("*").in("group_id", groupIds);
+  if (error) throw error;
+  return attachProfiles(supabase, members ?? []);
 }
 
 /** 家族グループを削除する（グループのowner、またはスーパー管理者のみ実行可能）。関連するチケット・メンバーも連鎖削除される */

@@ -24,6 +24,7 @@ export type Profile = {
   id: string;
   display_name: string;
   default_group_id: string | null;
+  is_super_admin: boolean;
   created_at: string;
 };
 
@@ -114,6 +115,7 @@ export type Database = {
       delete_user_account: { Args: { p_user_id: string }; Returns: undefined };
       list_all_accounts: { Args: Record<string, never>; Returns: AdminAccount[] };
       delete_family_group: { Args: { p_group_id: string }; Returns: undefined };
+      set_default_group: { Args: { p_group_id: string | null }; Returns: undefined };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

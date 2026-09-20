@@ -15,6 +15,8 @@ type AuthContextValue = {
   group: MyGroupInfo | null;
   /** 自分が所属している全ての家族グループ */
   groups: MyGroupInfo[];
+  /** 家族グループの取得に失敗した場合のエラーメッセージ（成功していればnull） */
+  groupsError: string | null;
   selectGroup: (groupId: string) => void;
   /** ログイン後に最初に表示する家族グループのID（未設定ならnull） */
   defaultGroupId: string | null;
@@ -41,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => (typeof window !== "undefined" && window.localStorage.getItem(SELECTED_GROUP_STORAGE_KEY)) || null
   );
   const [defaultGroupId, setDefaultGroupId] = useState<string | null>(null);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [adminViewGroup, setAdminViewGroup] = useState<FamilyGroup | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,22 +58,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ]);
         setGroups(list);
         setIsSuperAdmin(superAdmin);
+        setGroupsError(null);
         const defaultId = profile?.default_group_id ?? null;
         setDefaultGroupId(defaultId);
 
-        // このブラウザでまだ何も選択していない場合（ログイン直後など）は、
-        // 設定済みのデフォルトグループを初期表示に使う
         setSelectedGroupId((prev) => {
-          if (prev) return prev;
+          // 選択中のグループが最新の所属一覧に無い場合（脱退・削除済みなど）は選択状態をクリアする
+          const isStillMember = !!prev && list.some((g) => g.group.id === prev);
+          if (prev && !isStillMember && typeof window !== "undefined") {
+            window.localStorage.removeItem(SELECTED_GROUP_STORAGE_KEY);
+          }
+          if (isStillMember) return prev;
+
+          // このブラウザでまだ何も選択していない場合（ログイン直後など）は、
+          // 設定済みのデフォルトグループを初期表示に使う
           if (defaultId && list.some((g) => g.group.id === defaultId)) {
             if (typeof window !== "undefined") window.localStorage.setItem(SELECTED_GROUP_STORAGE_KEY, defaultId);
             return defaultId;
           }
-          return prev;
+          return null;
         });
       } catch {
-        setGroups([]);
-        setIsSuperAdmin(false);
+        // 一時的な通信エラー等で取得に失敗しても、既存のgroups/isSuperAdminは保持する
+        // （空にすると「所属グループがない」と誤解され、/groups/newへ誘導されてしまうため）
+        setGroupsError("家族グループの取得に失敗しました。通信状況をご確認のうえ、再読み込みしてください。");
       }
     },
     [supabase]
@@ -98,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setGroups([]);
         setIsSuperAdmin(false);
+        setGroupsError(null);
         setAdminViewGroup(null);
       }
       setLoading(false);
@@ -118,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setDefaultGroup = useCallback(
     async (groupId: string | null) => {
       if (!user) return;
-      await updateDefaultGroup(supabase, user.id, groupId);
+      await updateDefaultGroup(supabase, groupId);
       setDefaultGroupId(groupId);
     },
     [supabase, user]
@@ -143,6 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setGroups([]);
     setIsSuperAdmin(false);
+    setGroupsError(null);
     setAdminViewGroup(null);
     // 次回ログイン時にデフォルトの家族グループへ戻れるよう、このブラウザでの選択状態をクリアする
     setSelectedGroupId(null);
@@ -155,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         group,
         groups,
+        groupsError,
         selectGroup,
         defaultGroupId,
         setDefaultGroup,
