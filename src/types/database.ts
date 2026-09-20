@@ -99,6 +99,8 @@ export type Database = {
       is_member_of_group: { Args: { p_group_id: string }; Returns: boolean };
       create_family_group: { Args: { p_name: string }; Returns: FamilyGroup };
       join_family_group: { Args: { p_invite_code: string }; Returns: FamilyGroup };
+      regenerate_invite_code: { Args: { p_group_id: string }; Returns: FamilyGroup };
+      remove_family_member: { Args: { p_group_id: string; p_profile_id: string }; Returns: undefined };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

@@ -8,28 +8,42 @@ export type MyGroupInfo = {
   role: FamilyMember["role"];
 };
 
-export async function fetchMyGroup(supabase: Client): Promise<MyGroupInfo | null> {
+/** 自分が所属している全ての家族グループを取得する（1人が複数グループに所属できる） */
+export async function fetchMyGroups(supabase: Client): Promise<MyGroupInfo[]> {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError) throw userError;
   const user = userData.user;
-  if (!user) return null;
+  if (!user) return [];
 
-  const { data: membership, error: memberError } = await supabase
+  const { data: memberships, error: memberError } = await supabase
     .from("family_members")
     .select("*")
     .eq("profile_id", user.id)
-    .maybeSingle();
+    .order("joined_at", { ascending: true });
   if (memberError) throw memberError;
-  if (!membership) return null;
+  if (!memberships || memberships.length === 0) return [];
 
-  const { data: group, error: groupError } = await supabase
-    .from("family_groups")
-    .select("*")
-    .eq("id", membership.group_id)
-    .single();
+  const groupIds = memberships.map((m) => m.group_id);
+  const { data: groups, error: groupError } = await supabase.from("family_groups").select("*").in("id", groupIds);
   if (groupError) throw groupError;
 
-  return { group, role: membership.role };
+  const groupMap = new Map((groups ?? []).map((g) => [g.id, g]));
+  return memberships
+    .filter((m) => groupMap.has(m.group_id))
+    .map((m) => ({ group: groupMap.get(m.group_id)!, role: m.role }));
+}
+
+/** 招待コードを再発行する（グループのownerのみ実行可能） */
+export async function regenerateInviteCode(supabase: Client, groupId: string): Promise<FamilyGroup> {
+  const { data, error } = await supabase.rpc("regenerate_invite_code", { p_group_id: groupId });
+  if (error) throw error;
+  return data;
+}
+
+/** グループからメンバーを削除する（グループのownerのみ実行可能） */
+export async function removeFamilyMember(supabase: Client, groupId: string, profileId: string): Promise<void> {
+  const { error } = await supabase.rpc("remove_family_member", { p_group_id: groupId, p_profile_id: profileId });
+  if (error) throw error;
 }
 
 export async function createFamilyGroup(supabase: Client, name: string): Promise<FamilyGroup> {

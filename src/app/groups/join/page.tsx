@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 
 function JoinGroupForm() {
   const router = useRouter();
-  const { refreshGroup } = useAuth();
+  const { refreshGroup, selectGroup } = useAuth();
   const [supabase] = useState(() => createClient());
   const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -21,8 +21,9 @@ function JoinGroupForm() {
     setError(null);
     setSubmitting(true);
     try {
-      await joinFamilyGroup(supabase, inviteCode.trim().toUpperCase());
+      const joinedGroup = await joinFamilyGroup(supabase, inviteCode.trim().toUpperCase());
       await refreshGroup();
+      selectGroup(joinedGroup.id);
       router.replace("/home");
     } catch {
       setError("招待コードが正しくありません。ご確認のうえ再度お試しください。");

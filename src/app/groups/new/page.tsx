@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 
 function NewGroupForm() {
   const router = useRouter();
-  const { refreshGroup } = useAuth();
+  const { refreshGroup, selectGroup } = useAuth();
   const [supabase] = useState(() => createClient());
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -21,8 +21,9 @@ function NewGroupForm() {
     setError(null);
     setSubmitting(true);
     try {
-      await createFamilyGroup(supabase, name);
+      const newGroup = await createFamilyGroup(supabase, name);
       await refreshGroup();
+      selectGroup(newGroup.id);
       router.replace("/home");
     } catch {
       setError("家族グループの作成に失敗しました。時間をおいて再度お試しください。");
