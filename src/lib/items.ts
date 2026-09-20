@@ -20,6 +20,15 @@ function escapeLikePattern(value: string): string {
   return value.replace(/[%_\\]/g, (match) => `\\${match}`);
 }
 
+/**
+ * .or()フィルタの値として安全に埋め込めるようダブルクォートで囲む。
+ * カンマや括弧はPostgREST側で条件の区切り文字として解釈されるため、
+ * ダブルクォートで囲むことでその中身を単一の値として扱わせる（内部の"は\"にエスケープする）。
+ */
+function toOrFilterValue(likePattern: string): string {
+  return `"${likePattern.replace(/"/g, '\\"')}"`;
+}
+
 export async function fetchItems(
   supabase: Client,
   groupId: string,
@@ -29,8 +38,8 @@ export async function fetchItems(
   let query = supabase.from("items").select("*").eq("group_id", groupId);
 
   if (filters.keyword) {
-    const keyword = escapeLikePattern(filters.keyword);
-    query = query.or(`title.ilike.%${keyword}%,description.ilike.%${keyword}%`);
+    const keyword = toOrFilterValue(`%${escapeLikePattern(filters.keyword)}%`);
+    query = query.or(`title.ilike.${keyword},description.ilike.${keyword}`);
   }
   if (filters.assigneeId) query = query.eq("assignee_id", filters.assigneeId);
   if (filters.type) query = query.eq("type", filters.type);
@@ -133,7 +142,7 @@ export async function createRecurringItems(
     const startAt = input.isAllDay
       ? combineDateAndTimeJst(dateKey, "00:00")
       : combineDateAndTimeJst(dateKey, input.startTime);
-    const endAt = input.isAllDay ? null : combineDateAndTimeJst(dateKey, input.endTime);
+    const endAt = input.isAllDay || !input.endTime ? null : combineDateAndTimeJst(dateKey, input.endTime);
     return {
       ...toItemInsert(input),
       start_at: startAt,

@@ -172,5 +172,11 @@ describe("dateUtils", () => {
       const keys = generateRecurrenceDateKeys("2026-01-15", "monthly", 3);
       expect(keys).toEqual(["2026-01-15", "2026-02-15", "2026-03-15", "2026-04-15"]);
     });
+
+    it("clamps to the last day of the month when the day does not exist (month-end date)", () => {
+      // 2026-01-31開始 → 2月は28日までしかないため28日にクランプされ、月がスキップ・重複しない
+      const keys = generateRecurrenceDateKeys("2026-01-31", "monthly", 3);
+      expect(keys).toEqual(["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30"]);
+    });
   });
 });

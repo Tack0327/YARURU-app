@@ -105,7 +105,10 @@ export function generateRecurrenceDateKeys(
 
   if (freq === "monthly") {
     for (let occurrence = 0; ; occurrence += 1) {
-      const cursor = new Date(Date.UTC(year, month - 1 + occurrence, day));
+      const targetMonthIndex = month - 1 + occurrence;
+      // 対象月にstartDateKeyの日が存在しない場合（例: 1/31開始の2月）は月末日にクランプする
+      const daysInTargetMonth = new Date(Date.UTC(year, targetMonthIndex + 1, 0)).getUTCDate();
+      const cursor = new Date(Date.UTC(year, targetMonthIndex, Math.min(day, daysInTargetMonth)));
       if (cursor.getTime() > endExclusive.getTime()) break;
       keys.push(dateKeyFromUtcDate(cursor));
     }

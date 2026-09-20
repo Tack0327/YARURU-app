@@ -112,7 +112,12 @@ export function ItemForm({
     const startAt = isAllDay ? combineDateAndTimeJst(startDateOnly, "00:00") : fromDatetimeLocalValue(startAtLocal);
     const dueAt = isAllDay ? combineDateAndTimeJst(dueDateOnly, "00:00") : fromDatetimeLocalValue(dueAtLocal);
 
-    if (startAt && dueAt && new Date(dueAt).getTime() < new Date(startAt).getTime()) {
+    if (!startAt || !dueAt) {
+      setError("開始日と期限日の両方を入力してください。");
+      return;
+    }
+
+    if (new Date(dueAt).getTime() < new Date(startAt).getTime()) {
       setError("期限は開始より後に設定してください。");
       return;
     }
@@ -263,12 +268,13 @@ export function ItemForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="startAt" className="mb-1 block text-sm font-medium text-gray-700">
-              開始{isAllDay ? "日" : "日時"}
+              開始{isAllDay ? "日" : "日時"} <span className="text-red-600">*</span>
             </label>
             {isAllDay ? (
               <input
                 id="startAt"
                 type="date"
+                required
                 value={startDateOnly}
                 onChange={(e) => setStartDateOnly(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
@@ -277,6 +283,7 @@ export function ItemForm({
               <input
                 id="startAt"
                 type="datetime-local"
+                required
                 value={startAtLocal}
                 onChange={(e) => setStartAtLocal(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
@@ -285,12 +292,13 @@ export function ItemForm({
           </div>
           <div>
             <label htmlFor="dueAt" className="mb-1 block text-sm font-medium text-gray-700">
-              期限{isAllDay ? "日" : "日時"}
+              期限{isAllDay ? "日" : "日時"} <span className="text-red-600">*</span>
             </label>
             {isAllDay ? (
               <input
                 id="dueAt"
                 type="date"
+                required
                 value={dueDateOnly}
                 onChange={(e) => setDueDateOnly(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
@@ -299,6 +307,7 @@ export function ItemForm({
               <input
                 id="dueAt"
                 type="datetime-local"
+                required
                 value={dueAtLocal}
                 onChange={(e) => setDueAtLocal(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
