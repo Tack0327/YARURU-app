@@ -7,7 +7,7 @@ import { CalendarView } from "@/components/CalendarView";
 import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
 import { fetchAllGroups } from "@/lib/admin";
-import { dateKeyJst, isActiveOnDate, isOverdue, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
+import { dateKeyJst, isActiveOnDate, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { fetchItems, sortItemsForHome } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
@@ -15,6 +15,11 @@ import type { FamilyGroup, Item, ItemType } from "@/types/database";
 
 function itemCalendarDateKey(item: Item): string {
   return dateKeyJst(item.due_at) || dateKeyJst(item.start_at);
+}
+
+/** ステータスに関わらず期限日時を過ぎているかどうか（完了非表示チェックがオフのとき、完了済みでも期限超過欄に出せるようステータスは見ない） */
+function isPastDue(item: Item, now: Date): boolean {
+  return item.due_at !== null && new Date(item.due_at).getTime() < now.getTime();
 }
 
 const UPCOMING_RANGE_OPTIONS: { value: UpcomingRange; label: string }[] = [
@@ -61,6 +66,7 @@ function HomeContent() {
   const [month, setMonth] = useState(now.getMonth());
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [upcomingRange, setUpcomingRange] = useState<UpcomingRange>("month");
+  const [hideCompleted, setHideCompleted] = useState(false);
 
   const load = useCallback(async () => {
     if (!group) return;
@@ -81,9 +87,14 @@ function HomeContent() {
     load();
   }, [load]);
 
+  const visibleItems = useMemo(() => {
+    const all = items ?? [];
+    return hideCompleted ? all.filter((item) => item.status !== "done") : all;
+  }, [items, hideCompleted]);
+
   const typesByDate = useMemo(() => {
     const map = new Map<string, Set<ItemType>>();
-    for (const item of items ?? []) {
+    for (const item of visibleItems) {
       const key = itemCalendarDateKey(item);
       if (!key) continue;
       const types = map.get(key) ?? new Set<ItemType>();
@@ -91,7 +102,7 @@ function HomeContent() {
       map.set(key, types);
     }
     return map;
-  }, [items]);
+  }, [visibleItems]);
 
   function goToPrevMonth() {
     if (month === 0) {
@@ -121,23 +132,22 @@ function HomeContent() {
 
   const memberNameOf = (id: string | null) => members.find((m) => m.profile_id === id)?.profile.display_name;
 
-  const overdueItems = sortItemsForHome(items.filter((item) => isOverdue(item.due_at, item.status, now)));
+  const overdueItems = sortItemsForHome(visibleItems.filter((item) => isPastDue(item, now)));
   const todayItems = sortItemsForHome(
-    items.filter(
-      (item) => !isOverdue(item.due_at, item.status, now) && isActiveOnDate(item.start_at, item.due_at, todayKey)
-    )
+    visibleItems.filter((item) => !isPastDue(item, now) && isActiveOnDate(item.start_at, item.due_at, todayKey))
   );
   const upcomingRangeEnd = upcomingRangeEndKey(upcomingRange, now);
   const upcomingItems = sortItemsForHome(
-    items.filter(
+    visibleItems.filter(
       (item) =>
-        !isOverdue(item.due_at, item.status, now) &&
+        !isPastDue(item, now) &&
         !isActiveOnDate(item.start_at, item.due_at, todayKey) &&
-        item.status !== "done" &&
         itemCalendarDateKey(item) <= upcomingRangeEnd
     )
   );
-  const selectedDateItems = selectedDateKey ? items.filter((item) => itemCalendarDateKey(item) === selectedDateKey) : [];
+  const selectedDateItems = selectedDateKey
+    ? visibleItems.filter((item) => itemCalendarDateKey(item) === selectedDateKey)
+    : [];
 
   return (
     <div className="flex flex-col gap-8">
@@ -188,6 +198,16 @@ function HomeContent() {
         />
       </section>
 
+      <label className="flex items-center gap-2 self-start text-sm text-gray-600">
+        <input
+          type="checkbox"
+          checked={hideCompleted}
+          onChange={(e) => setHideCompleted(e.target.checked)}
+          className="h-4 w-4 rounded border-gray-300"
+        />
+        完了を非表示にする
+      </label>
+
       {selectedDateKey && (
         <section>
           <div className="mb-3 flex items-center justify-between">
@@ -215,6 +235,7 @@ function HomeContent() {
         emptyText="今日の予定・実施作業はありません"
         memberNameOf={memberNameOf}
       />
+
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-bold text-gray-500">今後の予定</h2>
