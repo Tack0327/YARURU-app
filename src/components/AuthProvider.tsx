@@ -45,33 +45,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [adminViewGroup, setAdminViewGroup] = useState<FamilyGroup | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadGroups = useCallback(async () => {
-    try {
-      const [list, superAdmin, profile] = await Promise.all([
-        fetchMyGroups(supabase),
-        checkIsSuperAdmin(supabase),
-        fetchMyProfile(supabase),
-      ]);
-      setGroups(list);
-      setIsSuperAdmin(superAdmin);
-      const defaultId = profile?.default_group_id ?? null;
-      setDefaultGroupId(defaultId);
+  const loadGroups = useCallback(
+    async (userId: string) => {
+      try {
+        const [list, superAdmin, profile] = await Promise.all([
+          fetchMyGroups(supabase, userId),
+          checkIsSuperAdmin(supabase),
+          fetchMyProfile(supabase, userId),
+        ]);
+        setGroups(list);
+        setIsSuperAdmin(superAdmin);
+        const defaultId = profile?.default_group_id ?? null;
+        setDefaultGroupId(defaultId);
 
-      // このブラウザでまだ何も選択していない場合（ログイン直後など）は、
-      // 設定済みのデフォルトグループを初期表示に使う
-      setSelectedGroupId((prev) => {
-        if (prev) return prev;
-        if (defaultId && list.some((g) => g.group.id === defaultId)) {
-          if (typeof window !== "undefined") window.localStorage.setItem(SELECTED_GROUP_STORAGE_KEY, defaultId);
-          return defaultId;
-        }
-        return prev;
-      });
-    } catch {
-      setGroups([]);
-      setIsSuperAdmin(false);
-    }
-  }, [supabase]);
+        // このブラウザでまだ何も選択していない場合（ログイン直後など）は、
+        // 設定済みのデフォルトグループを初期表示に使う
+        setSelectedGroupId((prev) => {
+          if (prev) return prev;
+          if (defaultId && list.some((g) => g.group.id === defaultId)) {
+            if (typeof window !== "undefined") window.localStorage.setItem(SELECTED_GROUP_STORAGE_KEY, defaultId);
+            return defaultId;
+          }
+          return prev;
+        });
+      } catch {
+        setGroups([]);
+        setIsSuperAdmin(false);
+      }
+    },
+    [supabase]
+  );
+
+  const refreshGroup = useCallback(async () => {
+    if (!user) return;
+    await loadGroups(user.id);
+  }, [user, loadGroups]);
 
   useEffect(() => {
     let active = true;
@@ -79,14 +87,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!active) return;
       setUser(data.user);
-      if (data.user) await loadGroups();
+      if (data.user) await loadGroups(data.user.id);
       setLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        loadGroups();
+        loadGroups(session.user.id);
       } else {
         setGroups([]);
         setIsSuperAdmin(false);
@@ -155,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         exitAdminView,
         isAdminViewing: adminViewGroup !== null,
         loading,
-        refreshGroup: loadGroups,
+        refreshGroup,
         signOut,
       }}
     >

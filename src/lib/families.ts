@@ -8,14 +8,13 @@ export type MyGroupInfo = {
   role: FamilyMember["role"];
 };
 
-/** 自分のプロフィール（ログイン後に表示する家族グループの設定を含む）を取得する */
-export async function fetchMyProfile(supabase: Client): Promise<Profile | null> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) throw userError;
-  const user = userData.user;
-  if (!user) return null;
-
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+/**
+ * 自分のプロフィール（ログイン後に表示する家族グループの設定を含む）を取得する。
+ * userIdは呼び出し元が既に持っている値を渡す（supabase.auth.getUser()は毎回サーバーへの往復が発生するため、
+ * ログイン直後の読み込みで何度も呼ぶと体感速度が悪化する）。
+ */
+export async function fetchMyProfile(supabase: Client, userId: string): Promise<Profile | null> {
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -26,17 +25,15 @@ export async function updateDefaultGroup(supabase: Client, profileId: string, gr
   if (error) throw error;
 }
 
-/** 自分が所属している全ての家族グループを取得する（1人が複数グループに所属できる） */
-export async function fetchMyGroups(supabase: Client): Promise<MyGroupInfo[]> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) throw userError;
-  const user = userData.user;
-  if (!user) return [];
-
+/**
+ * 自分が所属している全ての家族グループを取得する（1人が複数グループに所属できる）。
+ * userIdは呼び出し元が既に持っている値を渡す（理由はfetchMyProfileのコメント参照）。
+ */
+export async function fetchMyGroups(supabase: Client, userId: string): Promise<MyGroupInfo[]> {
   const { data: memberships, error: memberError } = await supabase
     .from("family_members")
     .select("*")
-    .eq("profile_id", user.id)
+    .eq("profile_id", userId)
     .order("joined_at", { ascending: true });
   if (memberError) throw memberError;
   if (!memberships || memberships.length === 0) return [];
