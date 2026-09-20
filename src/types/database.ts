@@ -30,7 +30,14 @@ export type FamilyGroup = {
   id: string;
   name: string;
   invite_code: string;
-  created_by: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type AdminAccount = {
+  id: string;
+  email: string;
+  display_name: string;
   created_at: string;
 };
 
@@ -56,7 +63,7 @@ export type Item = {
   recurrence_group_id: string | null;
   assignee_id: string | null;
   status: ItemStatus;
-  created_by: string;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -101,6 +108,10 @@ export type Database = {
       join_family_group: { Args: { p_invite_code: string }; Returns: FamilyGroup };
       regenerate_invite_code: { Args: { p_group_id: string }; Returns: FamilyGroup };
       remove_family_member: { Args: { p_group_id: string; p_profile_id: string }; Returns: undefined };
+      is_super_admin: { Args: Record<string, never>; Returns: boolean };
+      delete_user_account: { Args: { p_user_id: string }; Returns: undefined };
+      list_all_accounts: { Args: Record<string, never>; Returns: AdminAccount[] };
+      delete_family_group: { Args: { p_group_id: string }; Returns: undefined };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

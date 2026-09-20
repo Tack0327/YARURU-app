@@ -10,7 +10,7 @@ function LoadingScreen() {
 }
 
 function TopBar() {
-  const { user, group, groups, selectGroup, signOut } = useAuth();
+  const { user, group, groups, selectGroup, isAdminViewing, exitAdminView, signOut } = useAuth();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const displayName = (user?.user_metadata?.display_name as string | undefined) || user?.email || "";
@@ -27,35 +27,52 @@ function TopBar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-2">
-      {groups.length > 1 && group ? (
-        <select
-          value={group.group.id}
-          onChange={(e) => handleSelectGroup(e.target.value)}
-          aria-label="家族グループを切り替える"
-          className="min-h-9 max-w-[45%] truncate rounded-lg border border-gray-300 px-2 text-sm font-semibold text-gray-700"
-        >
-          {groups.map((g) => (
-            <option key={g.group.id} value={g.group.id}>
-              {g.group.name}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <span className="truncate text-sm font-semibold text-gray-700">{group?.group.name}</span>
+    <>
+      {isAdminViewing && (
+        <div className="flex items-center justify-between gap-2 bg-amber-100 px-4 py-1.5 text-xs font-semibold text-amber-800">
+          <span>🛡️ 管理者として「{group?.group.name}」を閲覧中</span>
+          <button
+            type="button"
+            onClick={() => {
+              exitAdminView();
+              router.replace("/home");
+            }}
+            className="underline"
+          >
+            終了する
+          </button>
+        </div>
       )}
-      <div className="flex items-center gap-3">
-        <span className="truncate text-sm font-medium text-gray-700">{displayName}</span>
-        <button
-          type="button"
-          onClick={handleSignOut}
-          disabled={loggingOut}
-          className="min-h-9 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-600 disabled:opacity-50"
-        >
-          {loggingOut ? "..." : "ログアウト"}
-        </button>
-      </div>
-    </header>
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-2">
+        {!isAdminViewing && groups.length > 1 && group ? (
+          <select
+            value={group.group.id}
+            onChange={(e) => handleSelectGroup(e.target.value)}
+            aria-label="家族グループを切り替える"
+            className="min-h-9 max-w-[45%] truncate rounded-lg border border-gray-300 px-2 text-sm font-semibold text-gray-700"
+          >
+            {groups.map((g) => (
+              <option key={g.group.id} value={g.group.id}>
+                {g.group.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="truncate text-sm font-semibold text-gray-700">{group?.group.name}</span>
+        )}
+        <div className="flex items-center gap-3">
+          <span className="truncate text-sm font-medium text-gray-700">{displayName}</span>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            disabled={loggingOut}
+            className="min-h-9 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-600 disabled:opacity-50"
+          >
+            {loggingOut ? "..." : "ログアウト"}
+          </button>
+        </div>
+      </header>
+    </>
   );
 }
 

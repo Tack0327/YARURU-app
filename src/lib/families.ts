@@ -74,3 +74,9 @@ export async function fetchGroupMembers(supabase: Client, groupId: string): Prom
     .filter((m) => profileMap.has(m.profile_id))
     .map((m) => ({ ...m, profile: profileMap.get(m.profile_id)! }));
 }
+
+/** 家族グループを削除する（グループのowner、またはスーパー管理者のみ実行可能）。関連するチケット・メンバーも連鎖削除される */
+export async function deleteFamilyGroup(supabase: Client, groupId: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_family_group", { p_group_id: groupId });
+  if (error) throw error;
+}

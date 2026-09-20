@@ -1,21 +1,34 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
-import { fetchGroupMembers, regenerateInviteCode, removeFamilyMember, type MemberWithProfile } from "@/lib/families";
+import { deleteAccount } from "@/lib/admin";
+import {
+  deleteFamilyGroup,
+  fetchGroupMembers,
+  regenerateInviteCode,
+  removeFamilyMember,
+  type MemberWithProfile,
+} from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
 
 function SettingsContent() {
-  const { user, group, groups, selectGroup, refreshGroup } = useAuth();
+  const router = useRouter();
+  const { user, group, groups, selectGroup, refreshGroup, signOut } = useAuth();
   const { showToast } = useToast();
   const [supabase] = useState(() => createClient());
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState(false);
+  const [confirmingDeleteGroup, setConfirmingDeleteGroup] = useState(false);
+  const [confirmingDeleteAccount, setConfirmingDeleteAccount] = useState(false);
 
   const isOwner = group?.role === "owner";
 
@@ -67,6 +80,36 @@ function SettingsContent() {
       showToast("削除に失敗しました。もう一度お試しください。", "error");
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  async function handleDeleteGroup() {
+    if (!group) return;
+    setDeletingGroup(true);
+    try {
+      await deleteFamilyGroup(supabase, group.group.id);
+      await refreshGroup();
+      showToast("グループを削除しました");
+      router.replace("/home");
+    } catch {
+      showToast("削除に失敗しました。もう一度お試しください。", "error");
+    } finally {
+      setDeletingGroup(false);
+      setConfirmingDeleteGroup(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!user) return;
+    setDeletingAccount(true);
+    try {
+      await deleteAccount(supabase, user.id);
+      await signOut();
+      router.replace("/login");
+    } catch {
+      showToast("削除に失敗しました。もう一度お試しください。", "error");
+      setDeletingAccount(false);
+      setConfirmingDeleteAccount(false);
     }
   }
 
@@ -134,6 +177,52 @@ function SettingsContent() {
         <p className="mt-1 text-xs text-gray-400">この招待コードを家族に共有すると参加できます。</p>
       </section>
 
+      {isOwner && (
+        <section>
+          <h2 className="mb-2 text-sm font-bold text-gray-500">危険な操作</h2>
+          <div className="rounded-lg border border-red-300 p-4">
+            {confirmingDeleteGroup ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm font-semibold text-red-700">
+                  「{group?.group.name}」を削除しますか？このグループの予定・実施作業・メンバー情報がすべて削除され、取り消せません。
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDeleteGroup(false)}
+                    disabled={deletingGroup}
+                    className="min-h-10 flex-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-600 disabled:opacity-50"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteGroup}
+                    disabled={deletingGroup}
+                    className="min-h-10 flex-1 rounded-lg bg-red-600 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {deletingGroup ? "削除中..." : "削除する"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDeleteGroup(true)}
+                  className="min-h-12 w-full text-base font-semibold text-red-600"
+                >
+                  {`「${group?.group.name}」を削除する`}
+                </button>
+                <p className="mt-1 text-xs text-gray-400">
+                  このグループの予定・実施作業・メンバー情報がすべて削除されます。取り消せません。
+                </p>
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
       <section>
         <h2 className="mb-2 text-sm font-bold text-gray-500">メンバー</h2>
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -159,6 +248,45 @@ function SettingsContent() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-bold text-gray-500">アカウント</h2>
+        <div className="rounded-lg border border-red-300 p-4">
+          {confirmingDeleteAccount ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-semibold text-red-700">
+                アカウントを削除しますか？所属している全ての家族グループから抜け、この操作は取り消せません。
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDeleteAccount(false)}
+                  disabled={deletingAccount}
+                  className="min-h-10 flex-1 rounded-lg border border-gray-300 text-sm font-semibold text-gray-600 disabled:opacity-50"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={deletingAccount}
+                  className="min-h-10 flex-1 rounded-lg bg-red-600 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {deletingAccount ? "削除中..." : "削除する"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDeleteAccount(true)}
+              className="min-h-12 w-full text-base font-semibold text-red-600"
+            >
+              アカウントを削除する（退会）
+            </button>
+          )}
+        </div>
       </section>
     </div>
   );
