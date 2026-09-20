@@ -6,11 +6,12 @@ import { useAuth } from "@/components/AuthProvider";
 import { CalendarView } from "@/components/CalendarView";
 import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
+import { fetchAllGroups } from "@/lib/admin";
 import { dateKeyJst, isActiveOnDate, isOverdue, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { fetchItems, sortItemsForHome } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
-import type { Item, ItemType } from "@/types/database";
+import type { FamilyGroup, Item, ItemType } from "@/types/database";
 
 function itemCalendarDateKey(item: Item): string {
   return dateKeyJst(item.due_at) || dateKeyJst(item.start_at);
@@ -24,11 +25,35 @@ const UPCOMING_RANGE_OPTIONS: { value: UpcomingRange; label: string }[] = [
 ];
 
 function HomeContent() {
-  const { group } = useAuth();
+  const { group, groups, selectGroup, isSuperAdmin, viewGroupAsAdmin } = useAuth();
   const [supabase] = useState(() => createClient());
   const [items, setItems] = useState<Item[] | null>(null);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [allGroupsForAdmin, setAllGroupsForAdmin] = useState<FamilyGroup[] | null>(null);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    fetchAllGroups(supabase)
+      .then(setAllGroupsForAdmin)
+      .catch(() => setAllGroupsForAdmin(null));
+  }, [isSuperAdmin, supabase]);
+
+  // スーパー管理者は自分の所属に関わらず全ての家族グループから選択できるようにする
+  const selectableGroups = useMemo<FamilyGroup[]>(
+    () => (isSuperAdmin && allGroupsForAdmin ? allGroupsForAdmin : groups.map((g) => g.group)),
+    [isSuperAdmin, allGroupsForAdmin, groups]
+  );
+
+  function handleSelectGroup(groupId: string) {
+    const isOwnGroup = groups.some((g) => g.group.id === groupId);
+    if (isOwnGroup) {
+      selectGroup(groupId);
+      return;
+    }
+    const targetGroup = selectableGroups.find((g) => g.id === groupId);
+    if (targetGroup) viewGroupAsAdmin(targetGroup);
+  }
 
   const now = new Date();
   const todayKey = dateKeyJst(now.toISOString());
@@ -117,7 +142,22 @@ function HomeContent() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">{group?.group.name}</h1>
+        {selectableGroups.length > 1 && group ? (
+          <select
+            value={group.group.id}
+            onChange={(e) => handleSelectGroup(e.target.value)}
+            aria-label="家族グループを切り替える"
+            className="max-w-[60%] truncate rounded-lg border border-gray-300 px-2 py-1.5 text-xl font-bold text-gray-900"
+          >
+            {selectableGroups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <h1 className="text-xl font-bold text-gray-900">{group?.group.name}</h1>
+        )}
         <Link
           href="/items/new"
           className="flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white"
