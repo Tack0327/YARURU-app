@@ -38,7 +38,9 @@ export default function LoginPage() {
       setError("メールアドレスまたはパスワードが正しくありません。");
       return;
     }
-    router.replace("/");
+    // "/"経由だとAuthProviderの状態が揃うのを待って再度リダイレクトする分、一段余計にレンダリングが挟まるため、
+    // ログイン直後は直接/homeへ遷移する（所属グループが無い場合はRequireAuthが/groups/newへ誘導する）
+    router.replace("/home");
   }
 
   return (

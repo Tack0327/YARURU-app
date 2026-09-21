@@ -102,17 +102,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        loadGroups(session.user.id);
+        // setLoading(false)を先に呼ぶと、groups未取得のまま「所属グループが無い」と
+        // 誤判定されて/groups/newへ一瞬遷移してしまうため、取得完了を待ってから解除する
+        await loadGroups(session.user.id);
       } else {
         setGroups([]);
         setIsSuperAdmin(false);
         setGroupsError(null);
         setAdminViewGroup(null);
       }
-      setLoading(false);
+      if (active) setLoading(false);
     });
 
     return () => {
