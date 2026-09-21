@@ -24,6 +24,20 @@ textarea {
   outline-offset: 2px;
 }
 
+/* 日付・時刻入力のカレンダー/時計アイコンは既定で黒く、薄暗い背景では見えなくなるため、
+   選んでいる背景（薄暗い/白ベース）に合わせてネイティブUIの配色を切り替える */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+.theme-light input[type="date"],
+.theme-light input[type="time"],
+.theme-light input[type="datetime-local"] {
+  color-scheme: light;
+}
+
 /*
  * ログイン画面で「白ベース」を選んだ場合に使う、明暗を反転させたパレット。
  * Tailwindの各色ユーティリティは --color-xxx-N というCSS変数を参照しているため、

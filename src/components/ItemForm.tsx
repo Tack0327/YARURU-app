@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 import { applyEnterContinuation, applyListPrefix, parseChecklistLine, toggleTaskLine, type ListPrefixKind } from "@/lib/checklist";
 import {
   addMonthsToDateKey,
@@ -42,6 +42,12 @@ export type ItemFormValues = {
 };
 
 const RECURRENCE_OPTIONS: RecurrenceFreq[] = ["daily", "weekly", "biweekly", "monthly"];
+
+// 日付/時刻入力はカレンダーアイコン部分をクリックしないと選択UIが開かないため、
+// 欄のどこをクリックしてもネイティブの選択UIが開くようにする（未対応ブラウザではshowPickerが存在せず何もしない）
+function openPicker(e: MouseEvent<HTMLInputElement>) {
+  e.currentTarget.showPicker?.();
+}
 
 export function ItemForm({
   members,
@@ -346,6 +352,7 @@ export function ItemForm({
               required
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
+              onClick={openPicker}
               className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
             />
           </div>
@@ -362,6 +369,7 @@ export function ItemForm({
                   required
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
+                  onClick={openPicker}
                   className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
                 />
               </div>
@@ -374,6 +382,7 @@ export function ItemForm({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
+                  onClick={openPicker}
                   className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
                 />
               </div>
@@ -420,6 +429,7 @@ export function ItemForm({
                 max={eventDate ? addMonthsToDateKey(eventDate, RECURRENCE_MAX_HORIZON_MONTHS) : undefined}
                 value={recurrenceUntil}
                 onChange={(e) => setRecurrenceUntil(e.target.value)}
+                onClick={openPicker}
                 className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               />
               <p className="mt-1 text-xs text-gray-500">
@@ -441,6 +451,7 @@ export function ItemForm({
                 required
                 value={startDateOnly}
                 onChange={(e) => setStartDateOnly(e.target.value)}
+                onClick={openPicker}
                 className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               />
             ) : (
@@ -450,6 +461,7 @@ export function ItemForm({
                 required
                 value={startAtLocal}
                 onChange={(e) => setStartAtLocal(e.target.value)}
+                onClick={openPicker}
                 className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               />
             )}
@@ -465,6 +477,7 @@ export function ItemForm({
                 required
                 value={dueDateOnly}
                 onChange={(e) => setDueDateOnly(e.target.value)}
+                onClick={openPicker}
                 className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               />
             ) : (
@@ -474,6 +487,7 @@ export function ItemForm({
                 required
                 value={dueAtLocal}
                 onChange={(e) => setDueAtLocal(e.target.value)}
+                onClick={openPicker}
                 className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               />
             )}
