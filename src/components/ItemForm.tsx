@@ -2,7 +2,15 @@
 
 import { useRef, useState } from "react";
 import { applyEnterContinuation, applyListPrefix, parseChecklistLine, toggleTaskLine, type ListPrefixKind } from "@/lib/checklist";
-import { combineDateAndTimeJst, dateKeyJst, fromDatetimeLocalValue, timeOfDayJst, toDatetimeLocalValue } from "@/lib/dateUtils";
+import {
+  addMonthsToDateKey,
+  combineDateAndTimeJst,
+  dateKeyJst,
+  fromDatetimeLocalValue,
+  RECURRENCE_DEFAULT_UNTIL_MONTHS,
+  timeOfDayJst,
+  toDatetimeLocalValue,
+} from "@/lib/dateUtils";
 import type { MemberWithProfile } from "@/lib/families";
 import {
   ITEM_TYPE_LABEL,
@@ -23,7 +31,7 @@ export type ItemFormValues = {
   dueAt: string | null;
   assigneeId: string | null;
   status: ItemStatus;
-  recurrence: { freq: RecurrenceFreq; startDateKey: string; startTime: string; endTime: string } | null;
+  recurrence: { freq: RecurrenceFreq; startDateKey: string; startTime: string; endTime: string; untilDateKey: string } | null;
 };
 
 const RECURRENCE_OPTIONS: RecurrenceFreq[] = ["daily", "weekly", "biweekly", "monthly"];
@@ -55,6 +63,7 @@ export function ItemForm({
   const [startTime, setStartTime] = useState(timeOfDayJst(initialItem?.start_at ?? null));
   const [endTime, setEndTime] = useState(timeOfDayJst(initialItem?.end_at ?? null));
   const [recurrenceFreq, setRecurrenceFreq] = useState<RecurrenceFreq | "none">("none");
+  const [recurrenceUntil, setRecurrenceUntil] = useState("");
 
   // 実施作業用（終日でなければ従来通り日時で管理する）
   const [startAtLocal, setStartAtLocal] = useState(toDatetimeLocalValue(initialItem?.start_at ?? null));
@@ -112,12 +121,28 @@ export function ItemForm({
         setError("終了時間は開始時間より後にしてください。");
         return;
       }
+      if (!initialItem && recurrenceFreq !== "none") {
+        if (!recurrenceUntil) {
+          setError("繰り返しの期限（ここまで）を入力してください。");
+          return;
+        }
+        if (recurrenceUntil < eventDate) {
+          setError("繰り返しの期限は開始日より後にしてください。");
+          return;
+        }
+      }
 
       const startAt = combineDateAndTimeJst(eventDate, isAllDay ? "00:00" : startTime);
       const endAt = isAllDay ? null : endTime ? combineDateAndTimeJst(eventDate, endTime) : null;
       const recurrence =
         !initialItem && recurrenceFreq !== "none"
-          ? { freq: recurrenceFreq, startDateKey: eventDate, startTime: isAllDay ? "00:00" : startTime, endTime: isAllDay ? "00:00" : endTime }
+          ? {
+              freq: recurrenceFreq,
+              startDateKey: eventDate,
+              startTime: isAllDay ? "00:00" : startTime,
+              endTime: isAllDay ? "00:00" : endTime,
+              untilDateKey: recurrenceUntil,
+            }
           : null;
 
       await onSubmit({
@@ -352,7 +377,13 @@ export function ItemForm({
               <select
                 id="recurrenceFreq"
                 value={recurrenceFreq}
-                onChange={(e) => setRecurrenceFreq(e.target.value as RecurrenceFreq | "none")}
+                onChange={(e) => {
+                  const value = e.target.value as RecurrenceFreq | "none";
+                  setRecurrenceFreq(value);
+                  if (value !== "none" && !recurrenceUntil && eventDate) {
+                    setRecurrenceUntil(addMonthsToDateKey(eventDate, RECURRENCE_DEFAULT_UNTIL_MONTHS));
+                  }
+                }}
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
               >
                 <option value="none">繰り返さない</option>
@@ -362,6 +393,24 @@ export function ItemForm({
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {!initialItem && recurrenceFreq !== "none" && (
+            <div>
+              <label htmlFor="recurrenceUntil" className="mb-1 block text-sm font-medium text-gray-700">
+                繰り返しの期限（ここまで） <span className="text-red-600">*</span>
+              </label>
+              <input
+                id="recurrenceUntil"
+                type="date"
+                required
+                min={eventDate || undefined}
+                value={recurrenceUntil}
+                onChange={(e) => setRecurrenceUntil(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+              />
+              <p className="mt-1 text-xs text-gray-400">この日までの分をまとめて作成します（最大24か月分）。</p>
             </div>
           )}
         </>

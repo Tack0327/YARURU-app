@@ -159,24 +159,35 @@ describe("dateUtils", () => {
     });
 
     it("generates weekly dates on the same weekday", () => {
-      const keys = generateRecurrenceDateKeys("2026-01-01", "weekly", 1);
+      const keys = generateRecurrenceDateKeys("2026-01-01", "weekly", "2026-01-31");
       expect(keys).toEqual(["2026-01-01", "2026-01-08", "2026-01-15", "2026-01-22", "2026-01-29"]);
     });
 
     it("generates biweekly dates", () => {
-      const keys = generateRecurrenceDateKeys("2026-01-01", "biweekly", 2);
+      const keys = generateRecurrenceDateKeys("2026-01-01", "biweekly", "2026-03-01");
       expect(keys).toEqual(["2026-01-01", "2026-01-15", "2026-01-29", "2026-02-12", "2026-02-26"]);
     });
 
     it("generates monthly dates on the same day of month", () => {
-      const keys = generateRecurrenceDateKeys("2026-01-15", "monthly", 3);
+      const keys = generateRecurrenceDateKeys("2026-01-15", "monthly", "2026-04-15");
       expect(keys).toEqual(["2026-01-15", "2026-02-15", "2026-03-15", "2026-04-15"]);
     });
 
     it("clamps to the last day of the month when the day does not exist (month-end date)", () => {
       // 2026-01-31開始 → 2月は28日までしかないため28日にクランプされ、月がスキップ・重複しない
-      const keys = generateRecurrenceDateKeys("2026-01-31", "monthly", 3);
+      const keys = generateRecurrenceDateKeys("2026-01-31", "monthly", "2026-04-30");
       expect(keys).toEqual(["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30"]);
+    });
+
+    it("stops at untilDateKey even mid-cycle", () => {
+      const keys = generateRecurrenceDateKeys("2026-01-01", "daily", "2026-01-03");
+      expect(keys).toEqual(["2026-01-01", "2026-01-02", "2026-01-03"]);
+    });
+
+    it("caps a far-future untilDateKey at the 24-month safety limit", () => {
+      const keys = generateRecurrenceDateKeys("2026-01-01", "monthly", "2099-01-01");
+      expect(keys[keys.length - 1]).toBe("2028-01-01");
+      expect(keys).toHaveLength(25);
     });
   });
 });

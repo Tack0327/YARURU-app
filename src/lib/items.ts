@@ -135,10 +135,10 @@ export async function createItem(supabase: Client, input: NewItemInput): Promise
  */
 export async function createRecurringItems(
   supabase: Client,
-  input: NewItemInput & { startDateKey: string; startTime: string; endTime: string },
+  input: NewItemInput & { startDateKey: string; startTime: string; endTime: string; untilDateKey?: string | null },
   freq: RecurrenceFreq
 ): Promise<Item[]> {
-  const dateKeys = generateRecurrenceDateKeys(input.startDateKey, freq);
+  const dateKeys = generateRecurrenceDateKeys(input.startDateKey, freq, input.untilDateKey);
   const recurrenceGroupId = crypto.randomUUID();
 
   const rows = dateKeys.map((dateKey) => {

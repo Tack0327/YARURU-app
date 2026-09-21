@@ -80,7 +80,10 @@ export function isActiveOnDate(startAtIso: string | null, dueAtIso: string | nul
   return false;
 }
 
-const RECURRENCE_HORIZON_MONTHS = 3;
+// untilDateKeyを指定しない場合のみ使う既定の期間
+const RECURRENCE_DEFAULT_HORIZON_MONTHS = 3;
+// untilDateKeyで指定された期限がどれだけ先でも、一度に作成する件数を抑えるための上限
+const RECURRENCE_MAX_HORIZON_MONTHS = 24;
 
 function dateKeyFromUtcDate(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(
@@ -88,18 +91,38 @@ function dateKeyFromUtcDate(date: Date): string {
   ).padStart(2, "0")}`;
 }
 
+function parseDateKeyUtc(dateKey: string): Date {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+/** 日付キー「YYYY-MM-DD」にmonthsか月を加算する（フォームの「繰り返しの期限」欄の初期値の計算に使う） */
+export function addMonthsToDateKey(dateKey: string, months: number): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return dateKeyFromUtcDate(new Date(Date.UTC(year, month - 1 + months, day)));
+}
+
+export const RECURRENCE_DEFAULT_UNTIL_MONTHS = RECURRENCE_DEFAULT_HORIZON_MONTHS;
+
 /**
- * 開始日(startDateKey, 「YYYY-MM-DD」)から指定した頻度で、既定の期間（デフォルト3か月）分の
- * 日付キーの一覧を生成する（繰り返し予定を複数の独立した項目として作成するために使用する）。
+ * 開始日(startDateKey, 「YYYY-MM-DD」)から指定した頻度で、untilDateKey（繰り返しの期限、「ここまで」）で
+ * 指定した日付まで日付キーの一覧を生成する（繰り返し予定を複数の独立した項目として作成するために使用する）。
+ * untilDateKeyを指定しない場合は既定の3か月分、指定した場合でも最大24か月分までしか作成しない
+ * （一度に大量の項目が作成されるのを防ぐための安全装置）。
  */
 export function generateRecurrenceDateKeys(
   startDateKey: string,
   freq: "daily" | "weekly" | "biweekly" | "monthly",
-  horizonMonths: number = RECURRENCE_HORIZON_MONTHS
+  untilDateKey?: string | null
 ): string[] {
   const [year, month, day] = startDateKey.split("-").map(Number);
   const start = new Date(Date.UTC(year, month - 1, day));
-  const endExclusive = new Date(Date.UTC(year, month - 1 + horizonMonths, day));
+  const maxEnd = new Date(Date.UTC(year, month - 1 + RECURRENCE_MAX_HORIZON_MONTHS, day));
+  const defaultEnd = new Date(Date.UTC(year, month - 1 + RECURRENCE_DEFAULT_HORIZON_MONTHS, day));
+
+  let endExclusive = untilDateKey ? parseDateKeyUtc(untilDateKey) : defaultEnd;
+  if (endExclusive.getTime() > maxEnd.getTime()) endExclusive = maxEnd;
+  if (endExclusive.getTime() < start.getTime()) endExclusive = start;
 
   const keys: string[] = [];
 

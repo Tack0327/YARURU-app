@@ -52,6 +52,7 @@ function NewItemContent() {
               startDateKey: values.recurrence.startDateKey,
               startTime: values.recurrence.startTime,
               endTime: values.recurrence.endTime,
+              untilDateKey: values.recurrence.untilDateKey,
             },
             values.recurrence.freq
           );
