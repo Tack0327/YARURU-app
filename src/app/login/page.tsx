@@ -33,11 +33,13 @@ export default function LoginPage() {
 
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
-    setSubmitting(false);
     if (signInError) {
+      setSubmitting(false);
       setError("メールアドレスまたはパスワードが正しくありません。");
       return;
     }
+    // 成功時はここでsetSubmitting(false)をするとページ遷移が反映されるまでの間
+    // 「ログイン中...」表示が一瞬「ログイン」に戻ってしまうため、遷移するまでtrueのままにする
     // "/"経由だとAuthProviderの状態が揃うのを待って再度リダイレクトする分、一段余計にレンダリングが挟まるため、
     // ログイン直後は直接/homeへ遷移する（所属グループが無い場合はRequireAuthが/groups/newへ誘導する）
     router.replace("/home");

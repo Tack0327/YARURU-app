@@ -31,9 +31,9 @@ export default function SignupPage() {
       password,
       options: { data: { display_name: displayName } },
     });
-    setSubmitting(false);
 
     if (signUpError) {
+      setSubmitting(false);
       setError(
         signUpError.message.includes("already registered")
           ? "このメールアドレスは既に登録されています。"
@@ -43,10 +43,12 @@ export default function SignupPage() {
     }
 
     if (data.session) {
-      // "/"経由だとAuthProviderの状態確定を待って再度リダイレクトする分、一段余計に待つため、
-      // 直接/homeへ遷移する（所属グループが無いのでRequireAuthが/groups/newへ誘導する）
+      // ここでsetSubmitting(false)をするとページ遷移が反映されるまでの間、送信中表示が一瞬元に戻ってしまうため、
+      // 遷移するまでtrueのままにする。"/"経由だとAuthProviderの状態確定を待って再度リダイレクトする分、
+      // 一段余計に待つため、直接/homeへ遷移する（所属グループが無いのでRequireAuthが/groups/newへ誘導する）
       router.replace("/home");
     } else {
+      setSubmitting(false);
       setConfirmationSent(true);
     }
   }

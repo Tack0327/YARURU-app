@@ -33,22 +33,20 @@ export async function updateDefaultGroup(supabase: Client, groupId: string | nul
  * userIdは呼び出し元が既に持っている値を渡す（理由はfetchMyProfileのコメント参照）。
  */
 export async function fetchMyGroups(supabase: Client, userId: string): Promise<MyGroupInfo[]> {
-  const { data: memberships, error: memberError } = await supabase
+  // family_groupsを外部キー経由で埋め込み取得し、1回の通信で済ませる
+  // （以前はfamily_members取得→取得したgroup_idでfamily_groups取得の2往復になっていた。
+  //   Database型のRelationshipsは空定義のままのため、.returns()で実際の戻り値の形を明示する）
+  const { data, error } = await supabase
     .from("family_members")
-    .select("*")
+    .select("role, family_groups(*)")
     .eq("profile_id", userId)
-    .order("joined_at", { ascending: true });
-  if (memberError) throw memberError;
-  if (!memberships || memberships.length === 0) return [];
+    .order("joined_at", { ascending: true })
+    .returns<{ role: FamilyMember["role"]; family_groups: FamilyGroup | null }[]>();
+  if (error) throw error;
 
-  const groupIds = memberships.map((m) => m.group_id);
-  const { data: groups, error: groupError } = await supabase.from("family_groups").select("*").in("id", groupIds);
-  if (groupError) throw groupError;
-
-  const groupMap = new Map((groups ?? []).map((g) => [g.id, g]));
-  return memberships
-    .filter((m) => groupMap.has(m.group_id))
-    .map((m) => ({ group: groupMap.get(m.group_id)!, role: m.role }));
+  return (data ?? [])
+    .filter((m) => m.family_groups)
+    .map((m) => ({ group: m.family_groups as FamilyGroup, role: m.role }));
 }
 
 /** 招待コードを再発行する（グループのownerのみ実行可能） */
@@ -84,23 +82,23 @@ export async function joinFamilyGroup(supabase: Client, inviteCode: string): Pro
 
 export type MemberWithProfile = FamilyMember & { profile: Profile };
 
-async function attachProfiles(supabase: Client, members: FamilyMember[]): Promise<MemberWithProfile[]> {
-  if (members.length === 0) return [];
+type MemberWithEmbeddedProfile = FamilyMember & { profiles: Profile | null };
 
-  const profileIds = [...new Set(members.map((m) => m.profile_id))];
-  const { data: profiles, error: profileError } = await supabase.from("profiles").select("*").in("id", profileIds);
-  if (profileError) throw profileError;
-
-  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+function toMemberWithProfile(members: MemberWithEmbeddedProfile[]): MemberWithProfile[] {
   return members
-    .filter((m) => profileMap.has(m.profile_id))
-    .map((m) => ({ ...m, profile: profileMap.get(m.profile_id)! }));
+    .filter((m) => m.profiles)
+    .map(({ profiles, ...member }) => ({ ...member, profile: profiles as Profile }));
 }
 
 export async function fetchGroupMembers(supabase: Client, groupId: string): Promise<MemberWithProfile[]> {
-  const { data: members, error } = await supabase.from("family_members").select("*").eq("group_id", groupId);
+  // profilesを外部キー経由で埋め込み取得し、1回の通信で済ませる（以前はfamily_members取得→profiles取得の2往復だった）
+  const { data, error } = await supabase
+    .from("family_members")
+    .select("*, profiles(*)")
+    .eq("group_id", groupId)
+    .returns<MemberWithEmbeddedProfile[]>();
   if (error) throw error;
-  return attachProfiles(supabase, members ?? []);
+  return toMemberWithProfile(data ?? []);
 }
 
 /**
@@ -110,9 +108,13 @@ export async function fetchGroupMembers(supabase: Client, groupId: string): Prom
  */
 export async function fetchGroupMembersForGroups(supabase: Client, groupIds: string[]): Promise<MemberWithProfile[]> {
   if (groupIds.length === 0) return [];
-  const { data: members, error } = await supabase.from("family_members").select("*").in("group_id", groupIds);
+  const { data, error } = await supabase
+    .from("family_members")
+    .select("*, profiles(*)")
+    .in("group_id", groupIds)
+    .returns<MemberWithEmbeddedProfile[]>();
   if (error) throw error;
-  return attachProfiles(supabase, members ?? []);
+  return toMemberWithProfile(data ?? []);
 }
 
 /**
