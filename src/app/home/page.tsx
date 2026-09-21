@@ -11,6 +11,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { useSelectableGroups } from "@/hooks/useSelectableGroups";
 import { dateKeyJst, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
+import { fetchHolidays } from "@/lib/holidays";
 import { fetchItems, sortItemsForHome, sortItemsForSelectedDate } from "@/lib/items";
 import { fetchNoteDatesInRange } from "@/lib/notes";
 import { createClient } from "@/lib/supabase/client";
@@ -61,6 +62,14 @@ function HomeContent() {
   const [upcomingRange, setUpcomingRange] = useState<UpcomingRange>("month");
   const [hideCompleted, setHideCompleted] = useState(false);
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
+  const [holidays, setHolidays] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    // 祝日は内閣府の公式データを日次で再取得しているだけなので、取得に失敗してもカレンダー自体は表示を続ける
+    fetchHolidays()
+      .then(setHolidays)
+      .catch(() => {});
+  }, []);
 
   // メモの編集画面は保存・削除後に /home?date=...&t=... へ遷移してくる。
   // tは毎回変わる値のため、同じ日付に戻ってきた場合でも下のuseEffectを再実行させ、
@@ -213,6 +222,7 @@ function HomeContent() {
           selectedDateKey={selectedDateKey}
           typesByDate={typesByDate}
           noteDates={noteDates}
+          holidays={holidays}
           onSelectDate={(dateKey) => setSelectedDateKey((prev) => (prev === dateKey ? null : dateKey))}
         />
       </section>
@@ -235,6 +245,9 @@ function HomeContent() {
               閉じる
             </button>
           </div>
+          {holidays.get(selectedDateKey) && (
+            <p className="mb-3 text-sm font-semibold text-red-500">{holidays.get(selectedDateKey)}</p>
+          )}
           {group && user && (
             <div className="mb-3">
               <DateNotes
