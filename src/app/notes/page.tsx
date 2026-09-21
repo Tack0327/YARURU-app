@@ -47,7 +47,8 @@ function NoteEditContent() {
   }, [supabase, group, user, dateKey, visibility]);
 
   function backToHome() {
-    router.push(`/home?date=${dateKey}`);
+    // tは、ホーム画面に戻ったときに必ずメモ・カレンダーの印を再取得させるためのキャッシュ回避用の値
+    router.push(`/home?date=${dateKey}&t=${Date.now()}`);
   }
 
   async function handleSave() {
@@ -63,14 +64,12 @@ function NoteEditContent() {
       if (visibility === "shared") {
         await upsertSharedNote(supabase, {
           groupId: group!.group.id,
-          profileId: user.id,
           noteDate: dateKey,
           title: title.trim() || null,
           content: content.trim() || null,
         });
       } else {
         await upsertMyPrivateNote(supabase, {
-          profileId: user.id,
           noteDate: dateKey,
           title: title.trim() || null,
           content: content.trim() || null,

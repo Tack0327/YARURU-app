@@ -8,6 +8,7 @@ import {
   dateKeyJst,
   fromDatetimeLocalValue,
   RECURRENCE_DEFAULT_UNTIL_MONTHS,
+  RECURRENCE_MAX_HORIZON_MONTHS,
   timeOfDayJst,
   toDatetimeLocalValue,
 } from "@/lib/dateUtils";
@@ -128,6 +129,10 @@ export function ItemForm({
         }
         if (recurrenceUntil < eventDate) {
           setError("繰り返しの期限は開始日より後にしてください。");
+          return;
+        }
+        if (recurrenceUntil > addMonthsToDateKey(eventDate, RECURRENCE_MAX_HORIZON_MONTHS)) {
+          setError(`繰り返しの期限は開始日から最大${RECURRENCE_MAX_HORIZON_MONTHS}か月後までにしてください。`);
           return;
         }
       }
@@ -406,11 +411,14 @@ export function ItemForm({
                 type="date"
                 required
                 min={eventDate || undefined}
+                max={eventDate ? addMonthsToDateKey(eventDate, RECURRENCE_MAX_HORIZON_MONTHS) : undefined}
                 value={recurrenceUntil}
                 onChange={(e) => setRecurrenceUntil(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
               />
-              <p className="mt-1 text-xs text-gray-400">この日までの分をまとめて作成します（最大24か月分）。</p>
+              <p className="mt-1 text-xs text-gray-400">
+                この日までの分をまとめて作成します（開始日から最大{RECURRENCE_MAX_HORIZON_MONTHS}か月後まで）。
+              </p>
             </div>
           )}
         </>

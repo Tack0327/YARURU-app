@@ -81,7 +81,8 @@ export type Note = {
   id: string;
   /** 「自分だけ」メモはグループに紐づかないためnull（「家族に共有」メモは必ず値を持つ） */
   group_id: string | null;
-  profile_id: string;
+  /** 最後に編集した人。そのアカウントが削除されるとnullになる（共有メモ自体は残る） */
+  profile_id: string | null;
   note_date: string;
   title: string | null;
   content: string | null;
@@ -138,6 +139,12 @@ export type Database = {
       delete_family_group: { Args: { p_group_id: string }; Returns: undefined };
       set_default_group: { Args: { p_group_id: string | null }; Returns: undefined };
       transfer_group_ownership: { Args: { p_group_id: string; p_new_owner_id: string }; Returns: undefined };
+      upsert_private_note: { Args: { p_note_date: string; p_title: string | null; p_content: string | null }; Returns: Note };
+      upsert_shared_note: {
+        Args: { p_group_id: string; p_note_date: string; p_title: string | null; p_content: string | null };
+        Returns: Note;
+      };
+      delete_account_with_transfers: { Args: { p_user_id: string; p_transfers: { group_id: string; new_owner_id: string }[] }; Returns: undefined };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

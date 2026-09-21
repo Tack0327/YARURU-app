@@ -83,7 +83,7 @@ export function isActiveOnDate(startAtIso: string | null, dueAtIso: string | nul
 // untilDateKeyを指定しない場合のみ使う既定の期間
 const RECURRENCE_DEFAULT_HORIZON_MONTHS = 3;
 // untilDateKeyで指定された期限がどれだけ先でも、一度に作成する件数を抑えるための上限
-const RECURRENCE_MAX_HORIZON_MONTHS = 24;
+export const RECURRENCE_MAX_HORIZON_MONTHS = 24;
 
 function dateKeyFromUtcDate(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(

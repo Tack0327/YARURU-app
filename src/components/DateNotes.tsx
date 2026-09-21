@@ -41,11 +41,14 @@ export function DateNotes({
   userId,
   dateKey,
   members,
+  refreshToken,
 }: {
   groupId: string;
   userId: string;
   dateKey: string;
   members: MemberWithProfile[];
+  /** 値が変わるたびにメモを再取得する（別画面での保存・削除から戻ってきたときに使う） */
+  refreshToken?: string;
 }) {
   const [supabase] = useState(() => createClient());
   const [sharedNote, setSharedNote] = useState<Note | null | undefined>(undefined);
@@ -62,9 +65,9 @@ export function DateNotes({
         setMyPrivateNote(mine);
       })
       .catch(() => setError("メモの取得に失敗しました。"));
-  }, [supabase, groupId, userId, dateKey]);
+  }, [supabase, groupId, userId, dateKey, refreshToken]);
 
-  function memberNameOf(profileId: string) {
+  function memberNameOf(profileId: string | null) {
     return members.find((m) => m.profile_id === profileId)?.profile.display_name ?? "不明なメンバー";
   }
 

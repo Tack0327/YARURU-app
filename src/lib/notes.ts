@@ -29,70 +29,41 @@ export async function fetchSharedNote(supabase: Client, groupId: string, noteDat
   return data;
 }
 
-async function saveNote(
+/**
+ * 自分の「自分だけ」メモを保存する（無ければ新規作成、あれば上書きする）。
+ * 家族グループに関わらず本人につき1日1件の共通メモとして扱う。タイトル・詳細のどちらか一方だけでもよい。
+ * DB側のON CONFLICTによる本当のUPSERTのため、同時保存による競合で内容が消えることがない。
+ */
+export async function upsertMyPrivateNote(
   supabase: Client,
-  existingId: string | null,
-  row: {
-    group_id: string | null;
-    profile_id: string;
-    note_date: string;
-    title: string | null;
-    content: string | null;
-    visibility: "shared" | "private";
-  }
+  input: { noteDate: string; title: string | null; content: string | null }
 ): Promise<Note> {
-  if (existingId) {
-    const { data, error } = await supabase
-      .from("notes")
-      .update({ title: row.title, content: row.content, profile_id: row.profile_id })
-      .eq("id", existingId)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  }
-
-  const { data, error } = await supabase.from("notes").insert(row).select().single();
+  const { data, error } = await supabase.rpc("upsert_private_note", {
+    p_note_date: input.noteDate,
+    p_title: input.title,
+    p_content: input.content,
+  });
   if (error) throw error;
   return data;
 }
 
 /**
- * 自分の「自分だけ」メモを保存する（無ければ新規作成、あれば上書きする）。
- * 家族グループに関わらず本人につき1日1件の共通メモとして扱う。タイトル・詳細のどちらか一方だけでもよい。
- */
-export async function upsertMyPrivateNote(
-  supabase: Client,
-  input: { profileId: string; noteDate: string; title: string | null; content: string | null }
-): Promise<Note> {
-  const existing = await fetchMyPrivateNote(supabase, input.profileId, input.noteDate);
-  return saveNote(supabase, existing?.id ?? null, {
-    group_id: null,
-    profile_id: input.profileId,
-    note_date: input.noteDate,
-    title: input.title,
-    content: input.content,
-    visibility: "private",
-  });
-}
-
-/**
  * その日付の「家族に共有」メモを保存する（グループ全体で1件。無ければ新規作成、あれば上書きする）。
  * グループの誰でも編集できる。保存すると、profile_idは「最後に編集した人」に更新される。
+ * DB側のON CONFLICTによる本当のUPSERTのため、同時保存による競合で内容が消えることがない。
  */
 export async function upsertSharedNote(
   supabase: Client,
-  input: { groupId: string; profileId: string; noteDate: string; title: string | null; content: string | null }
+  input: { groupId: string; noteDate: string; title: string | null; content: string | null }
 ): Promise<Note> {
-  const existing = await fetchSharedNote(supabase, input.groupId, input.noteDate);
-  return saveNote(supabase, existing?.id ?? null, {
-    group_id: input.groupId,
-    profile_id: input.profileId,
-    note_date: input.noteDate,
-    title: input.title,
-    content: input.content,
-    visibility: "shared",
+  const { data, error } = await supabase.rpc("upsert_shared_note", {
+    p_group_id: input.groupId,
+    p_note_date: input.noteDate,
+    p_title: input.title,
+    p_content: input.content,
   });
+  if (error) throw error;
+  return data;
 }
 
 /**

@@ -62,6 +62,18 @@ function HomeContent() {
   const [hideCompleted, setHideCompleted] = useState(false);
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
 
+  // メモの編集画面は保存・削除後に /home?date=...&t=... へ遷移してくる。
+  // tは毎回変わる値のため、同じ日付に戻ってきた場合でも下のuseEffectを再実行させ、
+  // メモ欄・カレンダーの印を必ず最新化できる（tが無いと、日付が同じ場合は再取得が起きない）。
+  const refreshToken = searchParams.get("t") ?? "";
+
+  useEffect(() => {
+    const dateParam = searchParams.get("date");
+    if (dateParam) setSelectedDateKey(dateParam);
+    // refreshTokenは、同じ日付に戻ってきたときでもこの効果を再実行させるための依存値
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshToken]);
+
   const loadNoteDates = useCallback(async () => {
     if (!group || !user) return;
     const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
@@ -77,7 +89,8 @@ function HomeContent() {
 
   useEffect(() => {
     loadNoteDates();
-  }, [loadNoteDates]);
+    // refreshTokenは、メモの編集画面から戻ってきたときにこの効果を再実行させるための依存値
+  }, [loadNoteDates, refreshToken]);
 
   const load = useCallback(async () => {
     if (!group) return;
@@ -224,7 +237,13 @@ function HomeContent() {
           </div>
           {group && user && (
             <div className="mb-3">
-              <DateNotes groupId={group.group.id} userId={user.id} dateKey={selectedDateKey} members={members} />
+              <DateNotes
+                groupId={group.group.id}
+                userId={user.id}
+                dateKey={selectedDateKey}
+                members={members}
+                refreshToken={refreshToken}
+              />
             </div>
           )}
           {selectedDateItems.length === 0 ? (

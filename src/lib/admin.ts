@@ -30,6 +30,22 @@ export async function deleteAccount(supabase: Client, userId: string): Promise<v
   if (error) throw error;
 }
 
+/**
+ * 管理者になっているグループの委譲とアカウント削除を、1つのトランザクションでまとめて実行する。
+ * 途中の委譲が失敗した場合は、それ以前の委譲も含めてすべて取り消される（中途半端な状態が残らない）。
+ */
+export async function deleteAccountWithTransfers(
+  supabase: Client,
+  userId: string,
+  transfers: { groupId: string; newOwnerId: string }[]
+): Promise<void> {
+  const { error } = await supabase.rpc("delete_account_with_transfers", {
+    p_user_id: userId,
+    p_transfers: transfers.map((t) => ({ group_id: t.groupId, new_owner_id: t.newOwnerId })),
+  });
+  if (error) throw error;
+}
+
 /** スーパー管理者向け: グループ削除前の警告表示用に、メンバー数・チケット数を取得する */
 export async function fetchGroupStats(supabase: Client, groupId: string): Promise<{ memberCount: number; itemCount: number }> {
   const [membersResult, itemsResult] = await Promise.all([

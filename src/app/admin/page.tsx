@@ -5,9 +5,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
-import { deleteAccount, fetchAllAccounts, fetchAllGroups, fetchGroupOwners, fetchGroupStats } from "@/lib/admin";
+import { deleteAccountWithTransfers, fetchAllAccounts, fetchAllGroups, fetchGroupOwners, fetchGroupStats } from "@/lib/admin";
 import { toErrorMessage } from "@/lib/errors";
-import { deleteFamilyGroup, fetchGroupMembersForGroups, transferGroupOwnership, type MemberWithProfile } from "@/lib/families";
+import { deleteFamilyGroup, fetchGroupMembersForGroups, type MemberWithProfile } from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
 import type { AdminAccount, FamilyGroup } from "@/types/database";
 
@@ -180,10 +180,11 @@ function AdminContent() {
 
     setDeletingId(account.id);
     try {
-      for (const { group } of transferGroups) {
-        await transferGroupOwnership(supabase, group.id, selectedNewOwner[group.id]);
-      }
-      await deleteAccount(supabase, account.id);
+      await deleteAccountWithTransfers(
+        supabase,
+        account.id,
+        transferGroups.map(({ group }) => ({ groupId: group.id, newOwnerId: selectedNewOwner[group.id] }))
+      );
       showToast("アカウントを削除しました");
       if (account.id === user?.id) {
         await signOut();
