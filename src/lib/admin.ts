@@ -29,3 +29,26 @@ export async function deleteAccount(supabase: Client, userId: string): Promise<v
   const { error } = await supabase.rpc("delete_user_account", { p_user_id: userId });
   if (error) throw error;
 }
+
+/** スーパー管理者向け: グループ削除前の警告表示用に、メンバー数・チケット数を取得する */
+export async function fetchGroupStats(supabase: Client, groupId: string): Promise<{ memberCount: number; itemCount: number }> {
+  const [membersResult, itemsResult] = await Promise.all([
+    supabase.from("family_members").select("id", { count: "exact", head: true }).eq("group_id", groupId),
+    supabase.from("items").select("id", { count: "exact", head: true }).eq("group_id", groupId),
+  ]);
+  if (membersResult.error) throw membersResult.error;
+  if (itemsResult.error) throw itemsResult.error;
+  return { memberCount: membersResult.count ?? 0, itemCount: itemsResult.count ?? 0 };
+}
+
+/** スーパー管理者向け: 指定したグループそれぞれの管理者(owner)のprofile_idを取得する（group_id → profile_id） */
+export async function fetchGroupOwners(supabase: Client, groupIds: string[]): Promise<Map<string, string>> {
+  if (groupIds.length === 0) return new Map();
+  const { data, error } = await supabase
+    .from("family_members")
+    .select("group_id, profile_id")
+    .eq("role", "owner")
+    .in("group_id", groupIds);
+  if (error) throw error;
+  return new Map((data ?? []).map((m) => [m.group_id, m.profile_id]));
+}
