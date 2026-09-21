@@ -22,6 +22,12 @@ import {
   type RecurrenceFreq,
 } from "@/types/database";
 
+// ホームやチケット一覧の左端の色（予定=緑、実施作業=オレンジ）と揃える
+const ITEM_TYPE_SELECTED_CLASS: Record<ItemType, string> = {
+  event: "border-green-600 bg-green-950 text-green-300",
+  todo: "border-amber-600 bg-amber-950 text-amber-300",
+};
+
 export type ItemFormValues = {
   type: ItemType;
   title: string;
@@ -201,7 +207,7 @@ export function ItemForm({
           <label
             key={value}
             className={`flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-lg border text-sm font-semibold ${
-              type === value ? "border-blue-600 bg-blue-950 text-blue-300" : "border-gray-600 text-gray-300"
+              type === value ? ITEM_TYPE_SELECTED_CLASS[value] : "border-gray-600 text-gray-300"
             }`}
           >
             <input
@@ -389,7 +395,7 @@ export function ItemForm({
                     setRecurrenceUntil(addMonthsToDateKey(eventDate, RECURRENCE_DEFAULT_UNTIL_MONTHS));
                   }
                 }}
-                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
+                className="w-full appearance-none rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               >
                 <option value="none">繰り返さない</option>
                 {RECURRENCE_OPTIONS.map((freq) => (
@@ -483,7 +489,7 @@ export function ItemForm({
           id="assignee"
           value={assigneeId}
           onChange={(e) => setAssigneeId(e.target.value)}
-          className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
+          className="w-full appearance-none rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
         >
           <option value="">未割り当て</option>
           {members.map((member) => (
@@ -503,7 +509,7 @@ export function ItemForm({
             id="status"
             value={status}
             onChange={(e) => setStatus(e.target.value as ItemStatus)}
-            className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
+            className="w-full appearance-none rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
           >
             <option value="not_started">未対応</option>
             <option value="in_progress">対応中</option>

@@ -236,7 +236,7 @@ function SettingsContent() {
             value={defaultGroupId ?? ""}
             onChange={(e) => handleChangeDefaultGroup(e.target.value)}
             disabled={savingDefaultGroup}
-            className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500 disabled:opacity-50"
+            className="w-full appearance-none rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500 disabled:opacity-50"
           >
             <option value="">指定しない（最後に見ていた家族を表示）</option>
             {groups.map((g) => (

@@ -7,7 +7,9 @@ const STATUS_LABEL: Record<ItemStatus, string> = {
 };
 
 const STATUS_CLASS: Record<ItemStatus, string> = {
-  not_started: "bg-gray-700 text-gray-300",
+  // 「未対応」はグレーの塗りにすると「グレーアウト＝完了・無効」という一般的なUIの見た目と衝突し、
+  // 完了（緑）と誤認されやすいため、塗りではなく枠線のみのニュートラルな表示にする
+  not_started: "border border-gray-400 bg-transparent text-gray-200",
   in_progress: "bg-blue-900 text-blue-300",
   done: "bg-green-900 text-green-300",
 };

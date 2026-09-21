@@ -81,7 +81,7 @@ export function BulkActionBar({
             onChange={(e) => onAssigneeChange(e.target.value)}
             disabled={!allowAssigneeChange}
             title={allowAssigneeChange ? undefined : "家族を1つに絞り込むと担当者を一括変更できます"}
-            className="rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100 disabled:bg-gray-700 disabled:text-gray-500"
+            className="appearance-none rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100 disabled:bg-gray-700 disabled:text-gray-500"
             aria-label="担当者をまとめて変更"
           >
             <option value="">{allowAssigneeChange ? "担当者: 変更しない" : "担当者: 家族を絞り込むと変更可能"}</option>
@@ -96,7 +96,7 @@ export function BulkActionBar({
           <select
             value={status}
             onChange={(e) => onStatusChange(e.target.value)}
-            className="rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
+            className="appearance-none rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
             aria-label="ステータスをまとめて変更"
           >
             <option value="">状況: 変更しない</option>

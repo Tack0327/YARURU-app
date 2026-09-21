@@ -357,7 +357,7 @@ function AdminContent() {
                               prev ? { ...prev, selectedNewOwner: { ...prev.selectedNewOwner, [group.id]: value } } : prev
                             );
                           }}
-                          className="min-h-9 rounded-lg border border-gray-600 bg-gray-800 px-3 text-sm text-gray-100"
+                          className="min-h-9 appearance-none rounded-lg border border-gray-600 bg-gray-800 px-3 text-sm text-gray-100"
                         >
                           <option value="">選択してください</option>
                           {members.map((m) => (

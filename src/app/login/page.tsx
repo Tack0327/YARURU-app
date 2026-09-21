@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PasswordInput } from "@/components/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
+import { getStoredTheme, setStoredTheme, type Theme } from "@/lib/theme";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +14,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [theme, setTheme] = useState<Theme>("dark");
+
+  useEffect(() => {
+    setTheme(getStoredTheme());
+  }, []);
+
+  function handleToggleTheme(checked: boolean) {
+    const value: Theme = checked ? "dark" : "light";
+    setTheme(value);
+    setStoredTheme(value);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,7 +44,16 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-8 text-center text-2xl font-bold text-gray-100">YARURU</h1>
+        <h1 className="mb-4 text-center text-2xl font-bold text-gray-100">YARURU</h1>
+        <label className="mb-8 flex items-center justify-center gap-2 text-sm text-gray-300">
+          <input
+            type="checkbox"
+            checked={theme === "dark"}
+            onChange={(e) => handleToggleTheme(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-600"
+          />
+          薄暗い背景
+        </label>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <div>
             <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-300">
