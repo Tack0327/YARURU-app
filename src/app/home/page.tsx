@@ -59,6 +59,8 @@ function HomeContent() {
   // 最初に開いたときから当日を選択した状態にしておく（今日の予定・メモがすぐ見えるようにするため）。
   // メモの編集画面から戻ってきたときは、date クエリパラメータで選択日付を復元する。
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(searchParams.get("date") || todayKey);
+  // 「閉じる」を押しても選択日付そのものは覚えておき、「開く」で同じ日付をすぐ再表示できるようにする
+  const [dateSectionOpen, setDateSectionOpen] = useState(true);
   const [upcomingRange, setUpcomingRange] = useState<UpcomingRange>("month");
   const [hideCompleted, setHideCompleted] = useState(false);
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
@@ -78,7 +80,10 @@ function HomeContent() {
 
   useEffect(() => {
     const dateParam = searchParams.get("date");
-    if (dateParam) setSelectedDateKey(dateParam);
+    if (dateParam) {
+      setSelectedDateKey(dateParam);
+      setDateSectionOpen(true);
+    }
     // refreshTokenは、同じ日付に戻ってきたときでもこの効果を再実行させるための依存値
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshToken]);
@@ -219,11 +224,18 @@ function HomeContent() {
           year={year}
           month={month}
           todayKey={todayKey}
-          selectedDateKey={selectedDateKey}
+          selectedDateKey={dateSectionOpen ? selectedDateKey : null}
           typesByDate={typesByDate}
           noteDates={noteDates}
           holidays={holidays}
-          onSelectDate={(dateKey) => setSelectedDateKey((prev) => (prev === dateKey ? null : dateKey))}
+          onSelectDate={(dateKey) => {
+            if (selectedDateKey === dateKey && dateSectionOpen) {
+              setDateSectionOpen(false);
+            } else {
+              setSelectedDateKey(dateKey);
+              setDateSectionOpen(true);
+            }
+          }}
         />
       </section>
 
@@ -241,32 +253,39 @@ function HomeContent() {
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold text-gray-400">{selectedDateKey}</h2>
-            <button onClick={() => setSelectedDateKey(null)} className="text-xs font-semibold text-blue-400">
-              閉じる
+            <button
+              onClick={() => setDateSectionOpen((prev) => !prev)}
+              className="text-xs font-semibold text-blue-400"
+            >
+              {dateSectionOpen ? "閉じる" : "開く"}
             </button>
           </div>
-          {holidays.get(selectedDateKey) && (
-            <p className="mb-3 text-sm font-semibold text-red-400">{holidays.get(selectedDateKey)}</p>
-          )}
-          {group && user && (
-            <div className="mb-3">
-              <DateNotes
-                groupId={group.group.id}
-                userId={user.id}
-                dateKey={selectedDateKey}
-                members={members}
-                refreshToken={refreshToken}
-              />
-            </div>
-          )}
-          {selectedDateItems.length === 0 ? (
-            <p className="text-sm text-gray-500">この日の予定・実施作業はありません</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {selectedDateItems.map((item) => (
-                <ItemCard key={item.id} item={item} assigneeName={memberNameOf(item.assignee_id)} />
-              ))}
-            </div>
+          {dateSectionOpen && (
+            <>
+              {holidays.get(selectedDateKey) && (
+                <p className="mb-3 text-sm font-semibold text-red-400">{holidays.get(selectedDateKey)}</p>
+              )}
+              {group && user && (
+                <div className="mb-3">
+                  <DateNotes
+                    groupId={group.group.id}
+                    userId={user.id}
+                    dateKey={selectedDateKey}
+                    members={members}
+                    refreshToken={refreshToken}
+                  />
+                </div>
+              )}
+              {selectedDateItems.length === 0 ? (
+                <p className="text-sm text-gray-500">この日の予定・実施作業はありません</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {selectedDateItems.map((item) => (
+                    <ItemCard key={item.id} item={item} assigneeName={memberNameOf(item.assignee_id)} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </section>
       )}
