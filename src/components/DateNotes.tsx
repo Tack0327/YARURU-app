@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { fetchNotesForDate } from "@/lib/notes";
+import { fetchMyPrivateNote, fetchSharedNote } from "@/lib/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { MemberWithProfile } from "@/lib/families";
 import type { Note, NoteVisibility } from "@/types/database";
@@ -48,19 +48,21 @@ export function DateNotes({
   members: MemberWithProfile[];
 }) {
   const [supabase] = useState(() => createClient());
-  const [notes, setNotes] = useState<Note[] | null>(null);
+  const [sharedNote, setSharedNote] = useState<Note | null | undefined>(undefined);
+  const [myPrivateNote, setMyPrivateNote] = useState<Note | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setNotes(null);
+    setSharedNote(undefined);
+    setMyPrivateNote(undefined);
     setError(null);
-    fetchNotesForDate(supabase, groupId, dateKey)
-      .then(setNotes)
+    Promise.all([fetchSharedNote(supabase, groupId, dateKey), fetchMyPrivateNote(supabase, userId, dateKey)])
+      .then(([shared, mine]) => {
+        setSharedNote(shared);
+        setMyPrivateNote(mine);
+      })
       .catch(() => setError("メモの取得に失敗しました。"));
-  }, [supabase, groupId, dateKey]);
-
-  const sharedNote = notes?.find((n) => n.visibility === "shared") ?? null;
-  const myPrivateNote = notes?.find((n) => n.profile_id === userId && n.visibility === "private") ?? null;
+  }, [supabase, groupId, userId, dateKey]);
 
   function memberNameOf(profileId: string) {
     return members.find((m) => m.profile_id === profileId)?.profile.display_name ?? "不明なメンバー";
@@ -70,7 +72,7 @@ export function DateNotes({
     <div className="flex flex-col gap-2 rounded-lg border-y border-r border-gray-200 border-l-4 border-l-blue-500 p-3">
       <h3 className="text-sm font-bold text-gray-500">メモ・日記</h3>
 
-      {notes === null ? (
+      {sharedNote === undefined || myPrivateNote === undefined ? (
         <p className="text-xs text-gray-400">読み込み中...</p>
       ) : (
         <>

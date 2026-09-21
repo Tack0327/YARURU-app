@@ -32,12 +32,11 @@ function NoteEditContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!group || !user || !dateKey) return;
+    if (!user || !dateKey) return;
+    if (visibility === "shared" && !group) return;
     setNote(undefined);
     const fetcher =
-      visibility === "shared"
-        ? fetchSharedNote(supabase, group.group.id, dateKey)
-        : fetchMyPrivateNote(supabase, group.group.id, user.id, dateKey);
+      visibility === "shared" ? fetchSharedNote(supabase, group!.group.id, dateKey) : fetchMyPrivateNote(supabase, user.id, dateKey);
     fetcher
       .then((fetched) => {
         setNote(fetched);
@@ -52,7 +51,8 @@ function NoteEditContent() {
   }
 
   async function handleSave() {
-    if (!group || !user) return;
+    if (!user) return;
+    if (visibility === "shared" && !group) return;
     if (!title.trim() && !content.trim()) {
       setError("タイトルか詳細のどちらかを入力してください。");
       return;
@@ -60,14 +60,22 @@ function NoteEditContent() {
     setError(null);
     setSaving(true);
     try {
-      const save = visibility === "shared" ? upsertSharedNote : upsertMyPrivateNote;
-      await save(supabase, {
-        groupId: group.group.id,
-        profileId: user.id,
-        noteDate: dateKey,
-        title: title.trim() || null,
-        content: content.trim() || null,
-      });
+      if (visibility === "shared") {
+        await upsertSharedNote(supabase, {
+          groupId: group!.group.id,
+          profileId: user.id,
+          noteDate: dateKey,
+          title: title.trim() || null,
+          content: content.trim() || null,
+        });
+      } else {
+        await upsertMyPrivateNote(supabase, {
+          profileId: user.id,
+          noteDate: dateKey,
+          title: title.trim() || null,
+          content: content.trim() || null,
+        });
+      }
       showToast("メモを保存しました");
       backToHome();
     } catch {

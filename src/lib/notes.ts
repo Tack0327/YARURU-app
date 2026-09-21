@@ -3,27 +3,11 @@ import type { Database, Note } from "@/types/database";
 
 type Client = SupabaseClient<Database>;
 
-/**
- * 指定した日付に紐づくメモを取得する。RLSにより、自分の「自分だけ」メモと、
- * そのグループの「家族に共有」メモ（グループ全体で1件）だけが返る。
- */
-export async function fetchNotesForDate(supabase: Client, groupId: string, noteDate: string): Promise<Note[]> {
+/** 自分の「自分だけ」メモ（本人しか見えない、家族グループに関わらず本人につき1日1件）を取得する */
+export async function fetchMyPrivateNote(supabase: Client, profileId: string, noteDate: string): Promise<Note | null> {
   const { data, error } = await supabase
     .from("notes")
     .select("*")
-    .eq("group_id", groupId)
-    .eq("note_date", noteDate)
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return data ?? [];
-}
-
-/** 自分の「自分だけ」メモ（本人しか見えない）を1件取得する */
-export async function fetchMyPrivateNote(supabase: Client, groupId: string, profileId: string, noteDate: string): Promise<Note | null> {
-  const { data, error } = await supabase
-    .from("notes")
-    .select("*")
-    .eq("group_id", groupId)
     .eq("profile_id", profileId)
     .eq("note_date", noteDate)
     .eq("visibility", "private")
@@ -49,7 +33,7 @@ async function saveNote(
   supabase: Client,
   existingId: string | null,
   row: {
-    group_id: string;
+    group_id: string | null;
     profile_id: string;
     note_date: string;
     title: string | null;
@@ -73,14 +57,17 @@ async function saveNote(
   return data;
 }
 
-/** 自分の「自分だけ」メモを保存する（無ければ新規作成、あれば上書きする）。タイトル・詳細のどちらか一方だけでもよい。 */
+/**
+ * 自分の「自分だけ」メモを保存する（無ければ新規作成、あれば上書きする）。
+ * 家族グループに関わらず本人につき1日1件の共通メモとして扱う。タイトル・詳細のどちらか一方だけでもよい。
+ */
 export async function upsertMyPrivateNote(
   supabase: Client,
-  input: { groupId: string; profileId: string; noteDate: string; title: string | null; content: string | null }
+  input: { profileId: string; noteDate: string; title: string | null; content: string | null }
 ): Promise<Note> {
-  const existing = await fetchMyPrivateNote(supabase, input.groupId, input.profileId, input.noteDate);
+  const existing = await fetchMyPrivateNote(supabase, input.profileId, input.noteDate);
   return saveNote(supabase, existing?.id ?? null, {
-    group_id: input.groupId,
+    group_id: null,
     profile_id: input.profileId,
     note_date: input.noteDate,
     title: input.title,
@@ -110,20 +97,21 @@ export async function upsertSharedNote(
 
 /**
  * 指定した期間内で、メモが書かれている日付の一覧を取得する（カレンダーに印を付けるために使う）。
- * RLSにより、自分の「自分だけ」メモと、そのグループの「家族に共有」メモの日付だけが返る。
+ * そのグループの「家族に共有」メモと、自分の「自分だけ」メモ（グループに関わらず）の日付を返す。
  */
 export async function fetchNoteDatesInRange(
   supabase: Client,
   groupId: string,
+  profileId: string,
   startDateKey: string,
   endDateKey: string
 ): Promise<Set<string>> {
   const { data, error } = await supabase
     .from("notes")
     .select("note_date")
-    .eq("group_id", groupId)
     .gte("note_date", startDateKey)
-    .lte("note_date", endDateKey);
+    .lte("note_date", endDateKey)
+    .or(`and(visibility.eq.shared,group_id.eq.${groupId}),and(visibility.eq.private,profile_id.eq.${profileId})`);
   if (error) throw error;
   return new Set((data ?? []).map((n) => n.note_date));
 }

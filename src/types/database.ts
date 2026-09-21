@@ -79,7 +79,8 @@ export type NoteVisibility = "shared" | "private";
 
 export type Note = {
   id: string;
-  group_id: string;
+  /** 「自分だけ」メモはグループに紐づかないためnull（「家族に共有」メモは必ず値を持つ） */
+  group_id: string | null;
   profile_id: string;
   note_date: string;
   title: string | null;
@@ -118,7 +119,7 @@ export type Database = {
       };
       notes: {
         Row: Note;
-        Insert: Partial<Note> & { group_id: string; profile_id: string; note_date: string };
+        Insert: Partial<Note> & { profile_id: string; note_date: string };
         Update: Partial<Note>;
         Relationships: [];
       };

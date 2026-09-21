@@ -63,17 +63,17 @@ function HomeContent() {
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
 
   const loadNoteDates = useCallback(async () => {
-    if (!group) return;
+    if (!group || !user) return;
     const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
     const startKey = `${year}-${String(month + 1).padStart(2, "0")}-01`;
     const endKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
     try {
-      const dates = await fetchNoteDatesInRange(supabase, group.group.id, startKey, endKey);
+      const dates = await fetchNoteDatesInRange(supabase, group.group.id, user.id, startKey, endKey);
       setNoteDates(dates);
     } catch {
       setNoteDates(new Set());
     }
-  }, [supabase, group, year, month]);
+  }, [supabase, group, user, year, month]);
 
   useEffect(() => {
     loadNoteDates();
