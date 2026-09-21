@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sortItemsForHome } from "@/lib/items";
+import { sortItemsForHome, sortItemsForSelectedDate } from "@/lib/items";
 import { shouldNotifyForItem } from "@/lib/notifications";
 import type { Item } from "@/types/database";
 
@@ -77,6 +77,26 @@ describe("sortItemsForHome", () => {
     const sorted = sortItemsForHome([todo, event], now);
 
     expect(sorted.map((item) => item.id)).toEqual(["event", "todo"]);
+  });
+});
+
+describe("sortItemsForSelectedDate", () => {
+  it("puts all-day items before timed items", () => {
+    const timed = makeItem({ id: "timed", is_all_day: false, start_at: "2026-06-15T00:00:00.000Z" });
+    const allDay = makeItem({ id: "all-day", is_all_day: true });
+
+    const sorted = sortItemsForSelectedDate([timed, allDay]);
+
+    expect(sorted.map((item) => item.id)).toEqual(["all-day", "timed"]);
+  });
+
+  it("sorts timed items by nearest time within the non-all-day group", () => {
+    const later = makeItem({ id: "later", is_all_day: false, due_at: "2026-06-15T18:00:00.000Z" });
+    const sooner = makeItem({ id: "sooner", is_all_day: false, due_at: "2026-06-15T09:00:00.000Z" });
+
+    const sorted = sortItemsForSelectedDate([later, sooner]);
+
+    expect(sorted.map((item) => item.id)).toEqual(["sooner", "later"]);
   });
 });
 

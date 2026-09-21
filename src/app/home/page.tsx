@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { CalendarView } from "@/components/CalendarView";
+import { DateNotes } from "@/components/DateNotes";
 import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useSelectableGroups } from "@/hooks/useSelectableGroups";
-import { dateKeyJst, isActiveOnDate, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
+import { dateKeyJst, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
-import { fetchItems, sortItemsForHome } from "@/lib/items";
+import { fetchItems, sortItemsForHome, sortItemsForSelectedDate } from "@/lib/items";
+import { fetchNoteDatesInRange } from "@/lib/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { Item, ItemType } from "@/types/database";
 
@@ -30,7 +32,7 @@ const UPCOMING_RANGE_OPTIONS: { value: UpcomingRange; label: string }[] = [
 ];
 
 function HomeContent() {
-  const { group, groups, selectGroup, viewGroupAsAdmin } = useAuth();
+  const { user, group, groups, selectGroup, viewGroupAsAdmin } = useAuth();
   const [supabase] = useState(() => createClient());
   const [items, setItems] = useState<Item[] | null>(null);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
@@ -51,9 +53,28 @@ function HomeContent() {
   const todayKey = dateKeyJst(now.toISOString());
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  // 最初に開いたときから当日を選択した状態にしておく（今日の予定・メモがすぐ見えるようにするため）
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(todayKey);
   const [upcomingRange, setUpcomingRange] = useState<UpcomingRange>("month");
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
+
+  const loadNoteDates = useCallback(async () => {
+    if (!group) return;
+    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    const startKey = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+    const endKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
+    try {
+      const dates = await fetchNoteDatesInRange(supabase, group.group.id, startKey, endKey);
+      setNoteDates(dates);
+    } catch {
+      setNoteDates(new Set());
+    }
+  }, [supabase, group, year, month]);
+
+  useEffect(() => {
+    loadNoteDates();
+  }, [loadNoteDates]);
 
   const load = useCallback(async () => {
     if (!group) return;
@@ -120,21 +141,14 @@ function HomeContent() {
   const memberNameOf = (id: string | null) => members.find((m) => m.profile_id === id)?.profile.display_name;
 
   const overdueItems = sortItemsForHome(visibleItems.filter((item) => isPastDue(item, now)));
-  const todayItems = sortItemsForHome(
-    visibleItems.filter((item) => !isPastDue(item, now) && isActiveOnDate(item.start_at, item.due_at, todayKey))
-  );
   const upcomingRangeEnd = upcomingRangeEndKey(upcomingRange, now);
   const upcomingItems = sortItemsForHome(
     visibleItems.filter(
-      (item) =>
-        !isPastDue(item, now) &&
-        !isActiveOnDate(item.start_at, item.due_at, todayKey) &&
-        itemCalendarDateKey(item) >= todayKey &&
-        itemCalendarDateKey(item) <= upcomingRangeEnd
+      (item) => !isPastDue(item, now) && itemCalendarDateKey(item) >= todayKey && itemCalendarDateKey(item) <= upcomingRangeEnd
     )
   );
   const selectedDateItems = selectedDateKey
-    ? visibleItems.filter((item) => itemCalendarDateKey(item) === selectedDateKey)
+    ? sortItemsForSelectedDate(visibleItems.filter((item) => itemCalendarDateKey(item) === selectedDateKey))
     : [];
 
   return (
@@ -182,6 +196,7 @@ function HomeContent() {
           todayKey={todayKey}
           selectedDateKey={selectedDateKey}
           typesByDate={typesByDate}
+          noteDates={noteDates}
           onSelectDate={(dateKey) => setSelectedDateKey((prev) => (prev === dateKey ? null : dateKey))}
         />
       </section>
@@ -204,6 +219,17 @@ function HomeContent() {
               閉じる
             </button>
           </div>
+          {group && user && (
+            <div className="mb-3">
+              <DateNotes
+                groupId={group.group.id}
+                userId={user.id}
+                dateKey={selectedDateKey}
+                members={members}
+                onNotesChanged={loadNoteDates}
+              />
+            </div>
+          )}
           {selectedDateItems.length === 0 ? (
             <p className="text-sm text-gray-400">この日の予定・実施作業はありません</p>
           ) : (
@@ -223,13 +249,6 @@ function HomeContent() {
         memberNameOf={memberNameOf}
         forceOverdue
       />
-      <Section
-        title="今日の予定"
-        items={todayItems}
-        emptyText="今日の予定・実施作業はありません"
-        memberNameOf={memberNameOf}
-      />
-
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-bold text-gray-500">今後の予定</h2>

@@ -75,6 +75,19 @@ export type ItemWithAssignee = Item & {
   assignee: Pick<Profile, "id" | "display_name"> | null;
 };
 
+export type NoteVisibility = "shared" | "private";
+
+export type Note = {
+  id: string;
+  group_id: string;
+  profile_id: string;
+  note_date: string;
+  content: string;
+  visibility: NoteVisibility;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -100,6 +113,12 @@ export type Database = {
         Row: Item;
         Insert: Partial<Item> & { group_id: string; type: ItemType; title: string; created_by: string };
         Update: Partial<Item>;
+        Relationships: [];
+      };
+      notes: {
+        Row: Note;
+        Insert: Partial<Note> & { group_id: string; profile_id: string; note_date: string; content: string };
+        Update: Partial<Note>;
         Relationships: [];
       };
     };

@@ -18,6 +18,20 @@ function scheduleText(item: Item): string | null {
   return `期限: ${formatDateTimeJst(item.due_at)}`;
 }
 
+/** カード左端に表示する時間情報。終日の場合はallDayのみtrueにし、時刻を持たない */
+type ItemTimeInfo = { allDay: boolean; start: string | null; end: string | null };
+
+function timeInfo(item: Item): ItemTimeInfo {
+  if (item.is_all_day) return { allDay: true, start: null, end: null };
+
+  const endIso = item.type === "event" ? item.end_at : item.due_at;
+  return {
+    allDay: false,
+    start: item.start_at ? formatDateTimeJst(item.start_at).slice(11) : null,
+    end: endIso ? formatDateTimeJst(endIso).slice(11) : null,
+  };
+}
+
 export function ItemCard({
   item,
   assigneeName,
@@ -38,12 +52,13 @@ export function ItemCard({
 }) {
   const overdue = overdueOverride ?? isOverdue(item.due_at, item.status);
   const schedule = scheduleText(item);
+  const time = timeInfo(item);
 
   const className = `block rounded-xl border-y border-r border-gray-200 bg-white p-4 shadow-sm border-l-4 ${ITEM_TYPE_ACCENT[item.type].border} ${
     selectionMode ? (selected ? "bg-blue-50 ring-2 ring-blue-500" : "") : "active:bg-gray-50"
   }`;
 
-  const content = (
+  const body = (
     <>
       <div className="mb-2 flex items-center gap-2">
         {selectionMode && (
@@ -74,6 +89,22 @@ export function ItemCard({
         {groupName && <span>家族: {groupName}</span>}
       </div>
     </>
+  );
+
+  const content = (
+    <div className="flex gap-3">
+      <div className="flex w-12 shrink-0 flex-col items-center justify-start pt-0.5 text-center">
+        {time.allDay ? (
+          <span className="text-xs font-bold text-gray-500">終日</span>
+        ) : (
+          <>
+            {time.start && <span className="text-sm font-bold text-gray-700">{time.start}</span>}
+            {time.end && <span className="text-xs text-gray-400">〜{time.end}</span>}
+          </>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">{body}</div>
+    </div>
   );
 
   if (selectionMode) {

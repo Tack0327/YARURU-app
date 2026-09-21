@@ -11,13 +11,15 @@ export type CalendarDay = {
   isCurrentMonth: boolean;
   isToday: boolean;
   types: ItemType[];
+  hasNote: boolean;
 };
 
 export function buildCalendarDays(
   year: number,
   month: number,
   todayKey: string,
-  typesByDate: Map<string, Set<ItemType>>
+  typesByDate: Map<string, Set<ItemType>>,
+  noteDates: Set<string> = new Set()
 ): CalendarDay[] {
   const firstDayOfMonth = new Date(Date.UTC(year, month, 1));
   const startWeekday = firstDayOfMonth.getUTCDay();
@@ -28,7 +30,7 @@ export function buildCalendarDays(
 
   for (let i = 0; i < startWeekday; i += 1) {
     const dayOfMonth = daysInPrevMonth - startWeekday + i + 1;
-    days.push({ dateKey: "", dayOfMonth, isCurrentMonth: false, isToday: false, types: [] });
+    days.push({ dateKey: "", dayOfMonth, isCurrentMonth: false, isToday: false, types: [], hasNote: false });
   }
 
   for (let day = 1; day <= daysInMonth; day += 1) {
@@ -40,12 +42,13 @@ export function buildCalendarDays(
       isCurrentMonth: true,
       isToday: dateKey === todayKey,
       types: types ? ALL_ITEM_TYPES.filter((type) => types.has(type)) : [],
+      hasNote: noteDates.has(dateKey),
     });
   }
 
   while (days.length % 7 !== 0) {
     const dayOfMonth = days.length - (startWeekday + daysInMonth) + 1;
-    days.push({ dateKey: "", dayOfMonth, isCurrentMonth: false, isToday: false, types: [] });
+    days.push({ dateKey: "", dayOfMonth, isCurrentMonth: false, isToday: false, types: [], hasNote: false });
   }
 
   return days;
@@ -57,6 +60,7 @@ export function CalendarView({
   todayKey,
   selectedDateKey,
   typesByDate,
+  noteDates,
   onSelectDate,
 }: {
   year: number;
@@ -64,9 +68,11 @@ export function CalendarView({
   todayKey: string;
   selectedDateKey: string | null;
   typesByDate: Map<string, Set<ItemType>>;
+  /** メモ・日記が書かれている日付（カレンダーに青い印を付けるために使う） */
+  noteDates?: Set<string>;
   onSelectDate: (dateKey: string) => void;
 }) {
-  const days = buildCalendarDays(year, month, todayKey, typesByDate);
+  const days = buildCalendarDays(year, month, todayKey, typesByDate, noteDates);
 
   return (
     <div>
@@ -95,11 +101,12 @@ export function CalendarView({
             }`}
           >
             <span>{day.dayOfMonth}</span>
-            {day.types.length > 0 && (
+            {(day.types.length > 0 || day.hasNote) && (
               <span className="mt-0.5 flex gap-0.5">
                 {day.types.map((type) => (
                   <span key={type} className={`h-1.5 w-1.5 rounded-full ${ITEM_TYPE_ACCENT[type].dot}`} />
                 ))}
+                {day.hasNote && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
               </span>
             )}
           </button>

@@ -77,6 +77,19 @@ export function sortItemsForHome(items: Item[], now: Date = new Date()): Item[] 
   });
 }
 
+/** 特定の日付の一覧向け: 終日の項目を先頭に、その後は時刻が近い順に並び替える（純関数・テスト対象） */
+export function sortItemsForSelectedDate(items: Item[]): Item[] {
+  return [...items].sort((a, b) => {
+    if (a.is_all_day !== b.is_all_day) return a.is_all_day ? -1 : 1;
+
+    const aTime = a.due_at ?? a.start_at;
+    const bTime = b.due_at ?? b.start_at;
+    const aMs = aTime ? new Date(aTime).getTime() : Number.POSITIVE_INFINITY;
+    const bMs = bTime ? new Date(bTime).getTime() : Number.POSITIVE_INFINITY;
+    return aMs - bMs;
+  });
+}
+
 export async function fetchCompletedHistory(supabase: Client, groupId: string): Promise<Item[]> {
   const { data, error } = await supabase
     .from("items")
