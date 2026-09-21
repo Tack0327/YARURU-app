@@ -43,7 +43,9 @@ export default function SignupPage() {
     }
 
     if (data.session) {
-      router.replace("/");
+      // "/"経由だとAuthProviderの状態確定を待って再度リダイレクトする分、一段余計に待つため、
+      // 直接/homeへ遷移する（所属グループが無いのでRequireAuthが/groups/newへ誘導する）
+      router.replace("/home");
     } else {
       setConfirmationSent(true);
     }
