@@ -82,7 +82,8 @@ export type Note = {
   group_id: string;
   profile_id: string;
   note_date: string;
-  content: string;
+  title: string | null;
+  content: string | null;
   visibility: NoteVisibility;
   created_at: string;
   updated_at: string;
@@ -117,7 +118,7 @@ export type Database = {
       };
       notes: {
         Row: Note;
-        Insert: Partial<Note> & { group_id: string; profile_id: string; note_date: string; content: string };
+        Insert: Partial<Note> & { group_id: string; profile_id: string; note_date: string };
         Update: Partial<Note>;
         Relationships: [];
       };

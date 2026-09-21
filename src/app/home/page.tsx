@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { CalendarView } from "@/components/CalendarView";
 import { DateNotes } from "@/components/DateNotes";
@@ -33,6 +34,7 @@ const UPCOMING_RANGE_OPTIONS: { value: UpcomingRange; label: string }[] = [
 
 function HomeContent() {
   const { user, group, groups, selectGroup, viewGroupAsAdmin } = useAuth();
+  const searchParams = useSearchParams();
   const [supabase] = useState(() => createClient());
   const [items, setItems] = useState<Item[] | null>(null);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
@@ -53,8 +55,9 @@ function HomeContent() {
   const todayKey = dateKeyJst(now.toISOString());
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  // 最初に開いたときから当日を選択した状態にしておく（今日の予定・メモがすぐ見えるようにするため）
-  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(todayKey);
+  // 最初に開いたときから当日を選択した状態にしておく（今日の予定・メモがすぐ見えるようにするため）。
+  // メモの編集画面から戻ってきたときは、date クエリパラメータで選択日付を復元する。
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(searchParams.get("date") || todayKey);
   const [upcomingRange, setUpcomingRange] = useState<UpcomingRange>("month");
   const [hideCompleted, setHideCompleted] = useState(false);
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
@@ -221,13 +224,7 @@ function HomeContent() {
           </div>
           {group && user && (
             <div className="mb-3">
-              <DateNotes
-                groupId={group.group.id}
-                userId={user.id}
-                dateKey={selectedDateKey}
-                members={members}
-                onNotesChanged={loadNoteDates}
-              />
+              <DateNotes groupId={group.group.id} userId={user.id} dateKey={selectedDateKey} members={members} />
             </div>
           )}
           {selectedDateItems.length === 0 ? (
@@ -321,7 +318,9 @@ function Section({
 export default function HomePage() {
   return (
     <RequireAuth requireGroup showNav>
-      <HomeContent />
+      <Suspense fallback={<p className="text-gray-500">読み込み中...</p>}>
+        <HomeContent />
+      </Suspense>
     </RequireAuth>
   );
 }
