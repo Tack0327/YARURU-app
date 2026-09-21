@@ -71,12 +71,12 @@ function NewItemContent() {
   );
 
   if (loadError) {
-    return <p className="text-sm text-red-600">{loadError}</p>;
+    return <p className="text-sm text-red-400">{loadError}</p>;
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-gray-900">新規登録</h1>
+      <h1 className="mb-6 text-xl font-bold text-gray-100">新規登録</h1>
       <ItemForm
         members={members}
         submitting={submitting}

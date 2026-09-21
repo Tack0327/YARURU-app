@@ -201,18 +201,18 @@ function AdminContent() {
   }
 
   if (!isSuperAdmin) {
-    return <p className="text-sm text-gray-500">このページを表示する権限がありません。</p>;
+    return <p className="text-sm text-gray-400">このページを表示する権限がありません。</p>;
   }
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-xl font-bold text-gray-900">管理者ページ</h1>
-      {error && <p className="whitespace-pre-line text-sm text-red-600">{error}</p>}
+      <h1 className="text-xl font-bold text-gray-100">管理者ページ</h1>
+      {error && <p className="whitespace-pre-line text-sm text-red-400">{error}</p>}
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-gray-500">全ての家族グループ（{filteredGroups.length}件）</h2>
+        <h2 className="mb-2 text-sm font-bold text-gray-400">全ての家族グループ（{filteredGroups.length}件）</h2>
         {!groups ? (
-          <p className="text-sm text-gray-400">読み込み中...</p>
+          <p className="text-sm text-gray-500">読み込み中...</p>
         ) : (
           <>
             <input
@@ -223,18 +223,18 @@ function AdminContent() {
                 setVisibleGroupCount(PAGE_SIZE);
               }}
               placeholder="グループ名・招待コードで検索"
-              className="mb-2 min-h-9 w-full rounded-lg border border-gray-300 px-3 text-sm"
+              className="mb-2 min-h-9 w-full rounded-lg border border-gray-600 bg-gray-800 px-3 text-sm text-gray-100"
             />
             <ul className="flex flex-col gap-2">
               {filteredGroups.slice(0, visibleGroupCount).map((g) => (
-              <li key={g.id} className="rounded-lg border border-gray-200 px-4 py-3">
+              <li key={g.id} className="rounded-lg border border-gray-700 px-4 py-3">
                 {confirmingDeleteGroupId === g.id ? (
                   <div className="flex flex-col gap-2">
-                    <p className="text-sm font-semibold text-red-700">
+                    <p className="text-sm font-semibold text-red-300">
                       「{g.name}」を削除しますか？このグループの予定・実施作業とメンバー情報がすべて削除され、取り消せません。
                     </p>
                     {groupStats?.id === g.id && (
-                      <p className="text-sm font-semibold text-red-700">
+                      <p className="text-sm font-semibold text-red-300">
                         メンバー{groupStats.memberCount}人、チケット{groupStats.itemCount}件が削除されます。
                       </p>
                     )}
@@ -246,7 +246,7 @@ function AdminContent() {
                           setGroupStats(null);
                         }}
                         disabled={deletingGroupId === g.id}
-                        className="min-h-9 flex-1 rounded-lg border border-gray-300 text-xs font-semibold text-gray-600 disabled:opacity-50"
+                        className="min-h-9 flex-1 rounded-lg border border-gray-600 text-xs font-semibold text-gray-300 disabled:opacity-50"
                       >
                         キャンセル
                       </button>
@@ -263,16 +263,16 @@ function AdminContent() {
                 ) : (
                   <div className="flex flex-col gap-2">
                     {groupDeleteError?.id === g.id && (
-                      <p className="text-xs font-semibold text-red-600">{groupDeleteError.message}</p>
+                      <p className="text-xs font-semibold text-red-400">{groupDeleteError.message}</p>
                     )}
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{g.name}</p>
-                        <p className="font-mono text-xs text-gray-400">{g.invite_code}</p>
+                        <p className="text-sm font-semibold text-gray-100">{g.name}</p>
+                        <p className="font-mono text-xs text-gray-500">{g.invite_code}</p>
                         {(() => {
                           const owner = accountsById.get(groupOwners.get(g.id) ?? "");
                           return (
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-gray-500">
                               管理者: {owner ? `${owner.display_name}（${owner.email}）` : "不明"}
                             </p>
                           );
@@ -282,7 +282,7 @@ function AdminContent() {
                         <button
                           type="button"
                           onClick={() => handleViewGroup(g)}
-                          className="min-h-9 rounded-lg border border-gray-300 px-3 text-xs font-semibold text-gray-600"
+                          className="min-h-9 rounded-lg border border-gray-600 px-3 text-xs font-semibold text-gray-300"
                         >
                           このグループを操作する
                         </button>
@@ -290,7 +290,7 @@ function AdminContent() {
                           type="button"
                           onClick={() => handleStartDeleteGroup(g)}
                           disabled={preparingGroupDeleteId === g.id}
-                          className="min-h-9 rounded-lg border border-red-300 px-3 text-xs font-semibold text-red-600 disabled:opacity-50"
+                          className="min-h-9 rounded-lg border border-red-300 px-3 text-xs font-semibold text-red-400 disabled:opacity-50"
                         >
                           {preparingGroupDeleteId === g.id ? "確認中..." : "削除"}
                         </button>
@@ -305,7 +305,7 @@ function AdminContent() {
               <button
                 type="button"
                 onClick={() => setVisibleGroupCount((c) => c + PAGE_SIZE)}
-                className="mt-2 min-h-9 w-full rounded-lg border border-gray-300 text-xs font-semibold text-gray-600"
+                className="mt-2 min-h-9 w-full rounded-lg border border-gray-600 text-xs font-semibold text-gray-300"
               >
                 もっと見る（残り{filteredGroups.length - visibleGroupCount}件）
               </button>
@@ -315,9 +315,9 @@ function AdminContent() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-gray-500">全てのアカウント（{filteredAccounts.length}件）</h2>
+        <h2 className="mb-2 text-sm font-bold text-gray-400">全てのアカウント（{filteredAccounts.length}件）</h2>
         {!accounts ? (
-          <p className="text-sm text-gray-400">読み込み中...</p>
+          <p className="text-sm text-gray-500">読み込み中...</p>
         ) : (
           <>
             <input
@@ -328,25 +328,25 @@ function AdminContent() {
                 setVisibleAccountCount(PAGE_SIZE);
               }}
               placeholder="表示名・メールアドレスで検索"
-              className="mb-2 min-h-9 w-full rounded-lg border border-gray-300 px-3 text-sm"
+              className="mb-2 min-h-9 w-full rounded-lg border border-gray-600 bg-gray-800 px-3 text-sm text-gray-100"
             />
             <ul className="flex flex-col gap-2">
               {filteredAccounts.slice(0, visibleAccountCount).map((account) => (
-              <li key={account.id} className="rounded-lg border border-gray-200 px-4 py-3">
+              <li key={account.id} className="rounded-lg border border-gray-700 px-4 py-3">
                 {deleteFlow?.account.id === account.id ? (
                   <div className="flex flex-col gap-3">
-                    <p className="text-sm font-semibold text-red-700">
+                    <p className="text-sm font-semibold text-red-300">
                       {account.display_name}（{account.email}）のアカウントを削除しますか？この操作は取り消せません。
                     </p>
                     {deleteFlow.soloGroups.length > 0 && (
-                      <p className="text-sm font-semibold text-red-700">
+                      <p className="text-sm font-semibold text-red-300">
                         このアカウントが唯一のメンバーである次の家族グループも、同時に削除されます：
                         {deleteFlow.soloGroups.map((g) => g.name).join("、")}
                       </p>
                     )}
                     {deleteFlow.transferGroups.map(({ group, members }) => (
                       <div key={group.id} className="flex flex-col gap-1">
-                        <p className="text-sm font-semibold text-blue-700">
+                        <p className="text-sm font-semibold text-blue-300">
                           「{group.name}」の新しい管理者を選択してください
                         </p>
                         <select
@@ -357,7 +357,7 @@ function AdminContent() {
                               prev ? { ...prev, selectedNewOwner: { ...prev.selectedNewOwner, [group.id]: value } } : prev
                             );
                           }}
-                          className="min-h-9 rounded-lg border border-gray-300 px-3 text-sm"
+                          className="min-h-9 rounded-lg border border-gray-600 bg-gray-800 px-3 text-sm text-gray-100"
                         >
                           <option value="">選択してください</option>
                           {members.map((m) => (
@@ -373,7 +373,7 @@ function AdminContent() {
                         type="button"
                         onClick={() => setDeleteFlow(null)}
                         disabled={deletingId === account.id}
-                        className="min-h-9 flex-1 rounded-lg border border-gray-300 text-xs font-semibold text-gray-600 disabled:opacity-50"
+                        className="min-h-9 flex-1 rounded-lg border border-gray-600 text-xs font-semibold text-gray-300 disabled:opacity-50"
                       >
                         キャンセル
                       </button>
@@ -393,17 +393,17 @@ function AdminContent() {
                 ) : (
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-sm font-semibold text-gray-100">
                         {account.display_name}
-                        {account.id === user?.id && <span className="ml-1 text-xs text-gray-400">(自分)</span>}
+                        {account.id === user?.id && <span className="ml-1 text-xs text-gray-500">(自分)</span>}
                       </p>
-                      <p className="text-xs text-gray-400">{account.email}</p>
+                      <p className="text-xs text-gray-500">{account.email}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleStartDeleteAccount(account)}
                       disabled={preparingDeleteId === account.id}
-                      className="min-h-9 rounded-lg border border-red-300 px-3 text-xs font-semibold text-red-600 disabled:opacity-50"
+                      className="min-h-9 rounded-lg border border-red-300 px-3 text-xs font-semibold text-red-400 disabled:opacity-50"
                     >
                       {preparingDeleteId === account.id ? "確認中..." : "削除"}
                     </button>
@@ -416,7 +416,7 @@ function AdminContent() {
               <button
                 type="button"
                 onClick={() => setVisibleAccountCount((c) => c + PAGE_SIZE)}
-                className="mt-2 min-h-9 w-full rounded-lg border border-gray-300 text-xs font-semibold text-gray-600"
+                className="mt-2 min-h-9 w-full rounded-lg border border-gray-600 text-xs font-semibold text-gray-300"
               >
                 もっと見る（残り{filteredAccounts.length - visibleAccountCount}件）
               </button>

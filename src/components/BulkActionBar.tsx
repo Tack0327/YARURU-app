@@ -43,9 +43,9 @@ export function BulkActionBar({
 
   if (confirmingDelete) {
     return (
-      <div className="fixed inset-x-0 bottom-14 z-40 border-t border-red-200 bg-red-50">
+      <div className="fixed inset-x-0 bottom-14 z-40 border-t border-red-800 bg-red-950">
         <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
-          <p className="flex-1 text-sm font-semibold text-red-900">
+          <p className="flex-1 text-sm font-semibold text-red-200">
             選択した{selectedCount}件を削除しますか？この操作は取り消せません。
           </p>
           <div className="flex gap-2">
@@ -53,7 +53,7 @@ export function BulkActionBar({
               type="button"
               onClick={() => setConfirmingDelete(false)}
               disabled={deleting}
-              className="min-h-10 flex-1 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-600 disabled:opacity-50 sm:flex-none"
+              className="min-h-10 flex-1 rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-300 disabled:opacity-50 sm:flex-none"
             >
               キャンセル
             </button>
@@ -72,16 +72,16 @@ export function BulkActionBar({
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-14 z-40 border-t border-blue-200 bg-blue-50">
+    <div className="fixed inset-x-0 bottom-14 z-40 border-t border-blue-800 bg-blue-950">
       <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
-        <p className="text-sm font-semibold text-blue-900">{selectedCount}件選択中</p>
+        <p className="text-sm font-semibold text-blue-200">{selectedCount}件選択中</p>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1">
           <select
             value={assigneeId}
             onChange={(e) => onAssigneeChange(e.target.value)}
             disabled={!allowAssigneeChange}
             title={allowAssigneeChange ? undefined : "家族を1つに絞り込むと担当者を一括変更できます"}
-            className="rounded-lg border border-gray-300 px-2 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-400"
+            className="rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100 disabled:bg-gray-700 disabled:text-gray-500"
             aria-label="担当者をまとめて変更"
           >
             <option value="">{allowAssigneeChange ? "担当者: 変更しない" : "担当者: 家族を絞り込むと変更可能"}</option>
@@ -96,7 +96,7 @@ export function BulkActionBar({
           <select
             value={status}
             onChange={(e) => onStatusChange(e.target.value)}
-            className="rounded-lg border border-gray-300 px-2 py-2 text-sm"
+            className="rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
             aria-label="ステータスをまとめて変更"
           >
             <option value="">状況: 変更しない</option>
@@ -109,7 +109,7 @@ export function BulkActionBar({
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-10 flex-1 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-600 sm:flex-none"
+            className="min-h-10 flex-1 rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-300 sm:flex-none"
           >
             選択解除
           </button>
@@ -117,7 +117,7 @@ export function BulkActionBar({
             type="button"
             onClick={() => setConfirmingDelete(true)}
             disabled={submitting || deleting}
-            className="min-h-10 flex-1 rounded-lg border border-red-300 px-4 text-sm font-semibold text-red-600 disabled:opacity-50 sm:flex-none"
+            className="min-h-10 flex-1 rounded-lg border border-red-300 px-4 text-sm font-semibold text-red-400 disabled:opacity-50 sm:flex-none"
           >
             まとめて削除
           </button>

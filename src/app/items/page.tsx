@@ -120,12 +120,12 @@ function ItemsContent() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">チケット一覧</h1>
+        <h1 className="text-xl font-bold text-gray-100">チケット一覧</h1>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={handleToggleSelectionMode}
-            className="flex min-h-10 items-center justify-center rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-600"
+            className="flex min-h-10 items-center justify-center rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-300"
           >
             {selectionMode ? "選択をやめる" : "まとめて変更"}
           </button>
@@ -140,19 +140,19 @@ function ItemsContent() {
 
       <FilterBar filters={filters} members={members} groups={groups} onChange={setFilters} />
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       {!items ? (
-        <p className="text-gray-500">読み込み中...</p>
+        <p className="text-gray-400">読み込み中...</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-gray-400">該当する項目はありません</p>
+        <p className="text-sm text-gray-500">該当する項目はありません</p>
       ) : (
         <>
           {selectionMode && (
             <button
               type="button"
               onClick={handleToggleSelectAll}
-              className="self-start text-xs font-semibold text-blue-600"
+              className="self-start text-xs font-semibold text-blue-400"
             >
               {selectedIds.size === items.length ? "すべて解除" : "すべて選択"}
             </button>

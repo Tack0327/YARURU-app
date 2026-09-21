@@ -77,20 +77,20 @@ function ItemDetailContent() {
   }, [supabase, params.id, showToast, router]);
 
   if (error) {
-    return <p className="text-sm text-red-600">{error}</p>;
+    return <p className="text-sm text-red-400">{error}</p>;
   }
 
   if (item === undefined) {
-    return <p className="text-gray-500">読み込み中...</p>;
+    return <p className="text-gray-400">読み込み中...</p>;
   }
 
   if (item === null) {
-    return <p className="text-sm text-gray-500">項目が見つかりませんでした。既に削除された可能性があります。</p>;
+    return <p className="text-sm text-gray-400">項目が見つかりませんでした。既に削除された可能性があります。</p>;
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-gray-900">詳細・編集</h1>
+      <h1 className="mb-6 text-xl font-bold text-gray-100">詳細・編集</h1>
       <ItemForm
         members={members}
         initialItem={item}
@@ -102,7 +102,7 @@ function ItemDetailContent() {
       <button
         onClick={handleDelete}
         disabled={deleting}
-        className="mt-6 min-h-12 w-full rounded-lg border border-red-300 text-base font-semibold text-red-600 disabled:opacity-50"
+        className="mt-6 min-h-12 w-full rounded-lg border border-red-300 text-base font-semibold text-red-400 disabled:opacity-50"
       >
         {deleting ? "削除中..." : "削除する"}
       </button>

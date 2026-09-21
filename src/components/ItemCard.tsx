@@ -54,8 +54,8 @@ export function ItemCard({
   const schedule = scheduleText(item);
   const time = timeInfo(item);
 
-  const className = `block rounded-xl border-y border-r border-gray-200 bg-white p-4 shadow-sm border-l-4 ${ITEM_TYPE_ACCENT[item.type].border} ${
-    selectionMode ? (selected ? "bg-blue-50 ring-2 ring-blue-500" : "") : "active:bg-gray-50"
+  const className = `block rounded-xl border-y border-r border-gray-700 bg-gray-800 p-4 shadow-sm border-l-4 ${ITEM_TYPE_ACCENT[item.type].border} ${
+    selectionMode ? (selected ? "bg-blue-950 ring-2 ring-blue-500" : "") : "active:bg-gray-700"
   }`;
 
   const body = (
@@ -68,22 +68,22 @@ export function ItemCard({
             onChange={onToggleSelect}
             onClick={(e) => e.stopPropagation()}
             aria-label={`${item.title}を選択`}
-            className="h-4 w-4 shrink-0 rounded border-gray-300"
+            className="h-4 w-4 shrink-0 rounded border-gray-600"
           />
         )}
-        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+        <span className="rounded bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-300">
           {ITEM_TYPE_LABEL[item.type]}
         </span>
         <StatusBadge status={item.status} />
         {overdue && <OverdueBadge />}
         {item.recurrence_freq && (
-          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+          <span className="rounded bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-400">
             🔁 {RECURRENCE_FREQ_LABEL[item.recurrence_freq]}
           </span>
         )}
       </div>
-      <p className="mb-1 text-base font-semibold text-gray-900">{item.title}</p>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
+      <p className="mb-1 text-base font-semibold text-gray-100">{item.title}</p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-400">
         {schedule && <span>{schedule}</span>}
         {assigneeName && <span>担当: {assigneeName}</span>}
         {groupName && <span>家族: {groupName}</span>}
@@ -95,11 +95,11 @@ export function ItemCard({
     <div className="flex gap-3">
       <div className="flex w-12 shrink-0 flex-col items-center justify-start pt-0.5 text-center">
         {time.allDay ? (
-          <span className="text-xs font-bold text-gray-500">終日</span>
+          <span className="text-xs font-bold text-gray-400">終日</span>
         ) : (
           <>
-            {time.start && <span className="text-sm font-bold text-gray-700">{time.start}</span>}
-            {time.end && <span className="text-xs text-gray-400">〜{time.end}</span>}
+            {time.start && <span className="text-sm font-bold text-gray-300">{time.start}</span>}
+            {time.end && <span className="text-xs text-gray-500">〜{time.end}</span>}
           </>
         )}
       </div>

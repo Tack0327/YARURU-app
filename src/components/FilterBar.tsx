@@ -22,14 +22,14 @@ export function FilterBar({
         placeholder="キーワードで検索"
         value={filters.keyword ?? ""}
         onChange={(e) => onChange({ ...filters, keyword: e.target.value })}
-        className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+        className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
         aria-label="キーワードで検索"
       />
       {groups && groups.length > 1 && (
         <select
           value={filters.groupId ?? ""}
           onChange={(e) => onChange({ ...filters, groupId: e.target.value || undefined })}
-          className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
+          className="w-full rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
           aria-label="家族で絞り込み"
         >
           <option value="">家族: すべて</option>
@@ -44,7 +44,7 @@ export function FilterBar({
         <select
           value={filters.type ?? ""}
           onChange={(e) => onChange({ ...filters, type: (e.target.value || undefined) as ItemFilters["type"] })}
-          className="rounded-lg border border-gray-300 px-2 py-2 text-sm"
+          className="rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
           aria-label="種別で絞り込み"
         >
           <option value="">種別: すべて</option>
@@ -54,7 +54,7 @@ export function FilterBar({
         <select
           value={filters.status ?? ""}
           onChange={(e) => onChange({ ...filters, status: (e.target.value || undefined) as ItemFilters["status"] })}
-          className="rounded-lg border border-gray-300 px-2 py-2 text-sm"
+          className="rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
           aria-label="ステータスで絞り込み"
         >
           <option value="">状況: すべて</option>
@@ -65,7 +65,7 @@ export function FilterBar({
         <select
           value={filters.assigneeId ?? ""}
           onChange={(e) => onChange({ ...filters, assigneeId: e.target.value || undefined })}
-          className="rounded-lg border border-gray-300 px-2 py-2 text-sm"
+          className="rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
           aria-label="担当者で絞り込み"
         >
           <option value="">担当: すべて</option>
@@ -81,7 +81,7 @@ export function FilterBar({
             const [sortBy, sortDirection] = e.target.value.split(":") as [SortField, SortDirection];
             onChange({ ...filters, sortBy, sortDirection });
           }}
-          className="rounded-lg border border-gray-300 px-2 py-2 text-sm"
+          className="rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
           aria-label="並び替え"
         >
           <option value="due_at:asc">期限が近い順</option>

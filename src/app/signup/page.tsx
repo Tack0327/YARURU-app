@@ -51,12 +51,12 @@ export default function SignupPage() {
 
   if (confirmationSent) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4 text-center">
-        <h1 className="mb-4 text-2xl font-bold text-gray-900">確認メールを送信しました</h1>
-        <p className="mb-8 max-w-sm text-sm text-gray-600">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4 text-center">
+        <h1 className="mb-4 text-2xl font-bold text-gray-100">確認メールを送信しました</h1>
+        <p className="mb-8 max-w-sm text-sm text-gray-300">
           {email} 宛に届いたメール内のリンクから認証を完了してください。
         </p>
-        <Link href="/login" className="font-semibold text-blue-600">
+        <Link href="/login" className="font-semibold text-blue-400">
           ログイン画面へ戻る
         </Link>
       </div>
@@ -64,12 +64,12 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-8 text-center text-2xl font-bold text-gray-900">新規登録</h1>
+        <h1 className="mb-8 text-center text-2xl font-bold text-gray-100">新規登録</h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <div>
-            <label htmlFor="displayName" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="displayName" className="mb-1 block text-sm font-medium text-gray-300">
               表示名
             </label>
             <input
@@ -78,11 +78,11 @@ export default function SignupPage() {
               required
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
             />
           </div>
           <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-300">
               メールアドレス
             </label>
             <input
@@ -92,11 +92,11 @@ export default function SignupPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
             />
           </div>
           <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-300">
               パスワード（6文字以上）
             </label>
             <PasswordInput
@@ -108,7 +108,7 @@ export default function SignupPage() {
             />
           </div>
           {error && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-red-400">
               {error}
             </p>
           )}
@@ -120,9 +120,9 @@ export default function SignupPage() {
             {submitting ? "登録中..." : "登録する"}
           </button>
         </form>
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm text-gray-300">
           既にアカウントをお持ちの方は{" "}
-          <Link href="/login" className="font-semibold text-blue-600">
+          <Link href="/login" className="font-semibold text-blue-400">
             ログイン
           </Link>
         </p>

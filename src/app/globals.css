@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* 目が疲れにくいよう、真っ黒ではなく薄暗いグレー（Tailwindのgray-900/gray-100相当）にする */
+  --background: #111827;
+  --foreground: #f3f4f6;
 }
 
 @theme inline {

@@ -30,12 +30,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-8 text-center text-2xl font-bold text-gray-900">YARURU</h1>
+        <h1 className="mb-8 text-center text-2xl font-bold text-gray-100">YARURU</h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-300">
               メールアドレス
             </label>
             <input
@@ -45,17 +45,17 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
             />
           </div>
           <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-300">
               パスワード
             </label>
             <PasswordInput id="password" autoComplete="current-password" value={password} onChange={setPassword} />
           </div>
           {error && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-red-400">
               {error}
             </p>
           )}
@@ -67,9 +67,9 @@ export default function LoginPage() {
             {submitting ? "ログイン中..." : "ログイン"}
           </button>
         </form>
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm text-gray-300">
           アカウントをお持ちでない方は{" "}
-          <Link href="/signup" className="font-semibold text-blue-600">
+          <Link href="/signup" className="font-semibold text-blue-400">
             新規登録
           </Link>
         </p>

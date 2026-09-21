@@ -39,12 +39,12 @@ function HistoryContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-bold text-gray-900">完了履歴</h1>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      <h1 className="text-xl font-bold text-gray-100">完了履歴</h1>
+      {error && <p className="text-sm text-red-400">{error}</p>}
       {!items ? (
-        <p className="text-gray-500">読み込み中...</p>
+        <p className="text-gray-400">読み込み中...</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-gray-400">完了した項目はまだありません</p>
+        <p className="text-sm text-gray-500">完了した項目はまだありません</p>
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((item) => (

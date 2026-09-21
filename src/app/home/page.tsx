@@ -156,11 +156,11 @@ function HomeContent() {
   }
 
   if (error) {
-    return <p className="text-sm text-red-600">{error}</p>;
+    return <p className="text-sm text-red-400">{error}</p>;
   }
 
   if (!items) {
-    return <p className="text-gray-500">読み込み中...</p>;
+    return <p className="text-gray-400">読み込み中...</p>;
   }
 
   const memberNameOf = (id: string | null) => members.find((m) => m.profile_id === id)?.profile.display_name;
@@ -184,7 +184,7 @@ function HomeContent() {
             value={group.group.id}
             onChange={(e) => handleSelectGroup(e.target.value)}
             aria-label="家族グループを切り替える"
-            className="max-w-[60%] truncate rounded-lg border border-gray-300 px-2 py-1.5 text-xl font-bold text-gray-900"
+            className="max-w-[60%] truncate rounded-lg border border-gray-600 bg-gray-800 px-2 py-1.5 text-xl font-bold text-gray-100"
           >
             {selectableGroups.map((g) => (
               <option key={g.id} value={g.id}>
@@ -193,7 +193,7 @@ function HomeContent() {
             ))}
           </select>
         ) : (
-          <h1 className="text-xl font-bold text-gray-900">{group?.group.name}</h1>
+          <h1 className="text-xl font-bold text-gray-100">{group?.group.name}</h1>
         )}
         <Link
           href="/items/new"
@@ -205,13 +205,13 @@ function HomeContent() {
 
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <button onClick={goToPrevMonth} className="min-h-10 min-w-10 rounded-lg border border-gray-300 text-gray-600">
+          <button onClick={goToPrevMonth} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
             ＜
           </button>
-          <h2 className="text-base font-bold text-gray-900">
+          <h2 className="text-base font-bold text-gray-100">
             {year}年{month + 1}月
           </h2>
-          <button onClick={goToNextMonth} className="min-h-10 min-w-10 rounded-lg border border-gray-300 text-gray-600">
+          <button onClick={goToNextMonth} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
             ＞
           </button>
         </div>
@@ -227,12 +227,12 @@ function HomeContent() {
         />
       </section>
 
-      <label className="flex items-center gap-2 self-start text-sm text-gray-600">
+      <label className="flex items-center gap-2 self-start text-sm text-gray-300">
         <input
           type="checkbox"
           checked={hideCompleted}
           onChange={(e) => setHideCompleted(e.target.checked)}
-          className="h-4 w-4 rounded border-gray-300"
+          className="h-4 w-4 rounded border-gray-600"
         />
         完了を非表示にする
       </label>
@@ -240,13 +240,13 @@ function HomeContent() {
       {selectedDateKey && (
         <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-500">{selectedDateKey}</h2>
-            <button onClick={() => setSelectedDateKey(null)} className="text-xs font-semibold text-blue-600">
+            <h2 className="text-sm font-bold text-gray-400">{selectedDateKey}</h2>
+            <button onClick={() => setSelectedDateKey(null)} className="text-xs font-semibold text-blue-400">
               閉じる
             </button>
           </div>
           {holidays.get(selectedDateKey) && (
-            <p className="mb-3 text-sm font-semibold text-red-500">{holidays.get(selectedDateKey)}</p>
+            <p className="mb-3 text-sm font-semibold text-red-400">{holidays.get(selectedDateKey)}</p>
           )}
           {group && user && (
             <div className="mb-3">
@@ -260,7 +260,7 @@ function HomeContent() {
             </div>
           )}
           {selectedDateItems.length === 0 ? (
-            <p className="text-sm text-gray-400">この日の予定・実施作業はありません</p>
+            <p className="text-sm text-gray-500">この日の予定・実施作業はありません</p>
           ) : (
             <div className="flex flex-col gap-3">
               {selectedDateItems.map((item) => (
@@ -280,7 +280,7 @@ function HomeContent() {
       />
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-gray-500">今後の予定</h2>
+          <h2 className="text-sm font-bold text-gray-400">今後の予定</h2>
           <div className="flex flex-wrap gap-1">
             {UPCOMING_RANGE_OPTIONS.map((option) => (
               <button
@@ -290,7 +290,7 @@ function HomeContent() {
                 className={`min-h-8 rounded-full border px-3 text-xs font-semibold ${
                   upcomingRange === option.value
                     ? "border-blue-600 bg-blue-600 text-white"
-                    : "border-gray-300 text-gray-600"
+                    : "border-gray-600 text-gray-300"
                 }`}
               >
                 {option.label}
@@ -299,7 +299,7 @@ function HomeContent() {
           </div>
         </div>
         {upcomingItems.length === 0 ? (
-          <p className="text-sm text-gray-400">今後の予定・実施作業はありません</p>
+          <p className="text-sm text-gray-500">今後の予定・実施作業はありません</p>
         ) : (
           <div className="flex flex-col gap-3">
             {upcomingItems.map((item) => (
@@ -328,9 +328,9 @@ function Section({
 }) {
   return (
     <section>
-      <h2 className="mb-3 text-sm font-bold text-gray-500">{title}</h2>
+      <h2 className="mb-3 text-sm font-bold text-gray-400">{title}</h2>
       {items.length === 0 ? (
-        <p className="text-sm text-gray-400">{emptyText}</p>
+        <p className="text-sm text-gray-500">{emptyText}</p>
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((item) => (
@@ -350,7 +350,7 @@ function Section({
 export default function HomePage() {
   return (
     <RequireAuth requireGroup showNav>
-      <Suspense fallback={<p className="text-gray-500">読み込み中...</p>}>
+      <Suspense fallback={<p className="text-gray-400">読み込み中...</p>}>
         <HomeContent />
       </Suspense>
     </RequireAuth>

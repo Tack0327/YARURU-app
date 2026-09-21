@@ -33,13 +33,13 @@ function JoinGroupForm() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-2 text-center text-2xl font-bold text-gray-900">家族グループに参加</h1>
-        <p className="mb-8 text-center text-sm text-gray-600">家族から共有された招待コードを入力してください。</p>
+        <h1 className="mb-2 text-center text-2xl font-bold text-gray-100">家族グループに参加</h1>
+        <p className="mb-8 text-center text-sm text-gray-300">家族から共有された招待コードを入力してください。</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <div>
-            <label htmlFor="inviteCode" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="inviteCode" className="mb-1 block text-sm font-medium text-gray-300">
               招待コード
             </label>
             <input
@@ -49,11 +49,11 @@ function JoinGroupForm() {
               placeholder="例：A1B2C3D4"
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base uppercase focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-3 text-base uppercase text-gray-100 focus:border-blue-500"
             />
           </div>
           {error && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-red-400">
               {error}
             </p>
           )}
@@ -65,9 +65,9 @@ function JoinGroupForm() {
             {submitting ? "参加中..." : "参加する"}
           </button>
         </form>
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm text-gray-300">
           まだグループがない方は{" "}
-          <Link href="/groups/new" className="font-semibold text-blue-600">
+          <Link href="/groups/new" className="font-semibold text-blue-400">
             作成する
           </Link>
         </p>

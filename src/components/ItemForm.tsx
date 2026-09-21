@@ -196,12 +196,12 @@ export function ItemForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
       <fieldset className="flex gap-2">
-        <legend className="mb-1 text-sm font-medium text-gray-700">種別</legend>
+        <legend className="mb-1 text-sm font-medium text-gray-300">種別</legend>
         {(["todo", "event"] as ItemType[]).map((value) => (
           <label
             key={value}
             className={`flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-lg border text-sm font-semibold ${
-              type === value ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-300 text-gray-600"
+              type === value ? "border-blue-600 bg-blue-950 text-blue-300" : "border-gray-600 text-gray-300"
             }`}
           >
             <input
@@ -218,7 +218,7 @@ export function ItemForm({
       </fieldset>
 
       <div>
-        <label htmlFor="title" className="mb-1 block text-sm font-medium text-gray-700">
+        <label htmlFor="title" className="mb-1 block text-sm font-medium text-gray-300">
           タイトル
         </label>
         <input
@@ -227,33 +227,33 @@ export function ItemForm({
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+          className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
         />
       </div>
 
       <div>
-        <label htmlFor="description" className="mb-1 block text-sm font-medium text-gray-700">
+        <label htmlFor="description" className="mb-1 block text-sm font-medium text-gray-300">
           詳細
         </label>
         <div className="mb-2 flex gap-2">
           <button
             type="button"
             onClick={() => handleApplyListPrefix("bullet")}
-            className="min-h-9 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-600"
+            className="min-h-9 rounded-lg border border-gray-600 px-3 text-sm font-semibold text-gray-300"
           >
             ・箇条書き
           </button>
           <button
             type="button"
             onClick={() => handleApplyListPrefix("numbered")}
-            className="min-h-9 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-600"
+            className="min-h-9 rounded-lg border border-gray-600 px-3 text-sm font-semibold text-gray-300"
           >
             1. 番号
           </button>
           <button
             type="button"
             onClick={() => handleApplyListPrefix("task")}
-            className="min-h-9 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-600"
+            className="min-h-9 rounded-lg border border-gray-600 px-3 text-sm font-semibold text-gray-300"
           >
             ☑ タスク
           </button>
@@ -265,10 +265,10 @@ export function ItemForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           onKeyDown={handleDescriptionKeyDown}
-          className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+          className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
         />
         {description.trim() && (
-          <div className="mt-2 flex flex-col gap-1 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <div className="mt-2 flex flex-col gap-1 rounded-lg border border-gray-700 bg-gray-700 p-3">
             {description.split("\n").map((line, index) => {
               const parsed = parseChecklistLine(line);
 
@@ -279,9 +279,9 @@ export function ItemForm({
                       type="checkbox"
                       checked={parsed.checked}
                       onChange={() => setDescription((prev) => toggleTaskLine(prev, index))}
-                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300"
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-600"
                     />
-                    <span className={parsed.checked ? "text-gray-400 line-through" : "text-gray-700"}>
+                    <span className={parsed.checked ? "text-gray-500 line-through" : "text-gray-300"}>
                       {parsed.text}
                     </span>
                   </label>
@@ -290,7 +290,7 @@ export function ItemForm({
 
               if (parsed.kind === "bullet") {
                 return (
-                  <p key={index} className="flex gap-2 text-sm text-gray-700">
+                  <p key={index} className="flex gap-2 text-sm text-gray-300">
                     <span aria-hidden>・</span>
                     <span>{parsed.text}</span>
                   </p>
@@ -299,7 +299,7 @@ export function ItemForm({
 
               if (parsed.kind === "numbered") {
                 return (
-                  <p key={index} className="flex gap-2 text-sm text-gray-700">
+                  <p key={index} className="flex gap-2 text-sm text-gray-300">
                     <span aria-hidden>{parsed.number}.</span>
                     <span>{parsed.text}</span>
                   </p>
@@ -307,7 +307,7 @@ export function ItemForm({
               }
 
               return line.trim() ? (
-                <p key={index} className="text-sm text-gray-700">
+                <p key={index} className="text-sm text-gray-300">
                   {line}
                 </p>
               ) : (
@@ -318,12 +318,12 @@ export function ItemForm({
         )}
       </div>
 
-      <label className="flex min-h-10 items-center gap-2 text-sm font-medium text-gray-700">
+      <label className="flex min-h-10 items-center gap-2 text-sm font-medium text-gray-300">
         <input
           type="checkbox"
           checked={isAllDay}
           onChange={(e) => setIsAllDay(e.target.checked)}
-          className="h-5 w-5 rounded border-gray-300"
+          className="h-5 w-5 rounded border-gray-600"
         />
         終日（時間を指定しない）
       </label>
@@ -331,7 +331,7 @@ export function ItemForm({
       {type === "event" ? (
         <>
           <div>
-            <label htmlFor="eventDate" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="eventDate" className="mb-1 block text-sm font-medium text-gray-300">
               日付
             </label>
             <input
@@ -340,14 +340,14 @@ export function ItemForm({
               required
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
             />
           </div>
 
           {!isAllDay && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="startTime" className="mb-1 block text-sm font-medium text-gray-700">
+                <label htmlFor="startTime" className="mb-1 block text-sm font-medium text-gray-300">
                   開始時間
                 </label>
                 <input
@@ -356,11 +356,11 @@ export function ItemForm({
                   required
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label htmlFor="endTime" className="mb-1 block text-sm font-medium text-gray-700">
+                <label htmlFor="endTime" className="mb-1 block text-sm font-medium text-gray-300">
                   終了時間
                 </label>
                 <input
@@ -368,7 +368,7 @@ export function ItemForm({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -376,7 +376,7 @@ export function ItemForm({
 
           {!initialItem && (
             <div>
-              <label htmlFor="recurrenceFreq" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="recurrenceFreq" className="mb-1 block text-sm font-medium text-gray-300">
                 繰り返し
               </label>
               <select
@@ -389,7 +389,7 @@ export function ItemForm({
                     setRecurrenceUntil(addMonthsToDateKey(eventDate, RECURRENCE_DEFAULT_UNTIL_MONTHS));
                   }
                 }}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               >
                 <option value="none">繰り返さない</option>
                 {RECURRENCE_OPTIONS.map((freq) => (
@@ -403,8 +403,8 @@ export function ItemForm({
 
           {!initialItem && recurrenceFreq !== "none" && (
             <div>
-              <label htmlFor="recurrenceUntil" className="mb-1 block text-sm font-medium text-gray-700">
-                繰り返しの期限（ここまで） <span className="text-red-600">*</span>
+              <label htmlFor="recurrenceUntil" className="mb-1 block text-sm font-medium text-gray-300">
+                繰り返しの期限（ここまで） <span className="text-red-400">*</span>
               </label>
               <input
                 id="recurrenceUntil"
@@ -414,9 +414,9 @@ export function ItemForm({
                 max={eventDate ? addMonthsToDateKey(eventDate, RECURRENCE_MAX_HORIZON_MONTHS) : undefined}
                 value={recurrenceUntil}
                 onChange={(e) => setRecurrenceUntil(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               />
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-500">
                 この日までの分をまとめて作成します（開始日から最大{RECURRENCE_MAX_HORIZON_MONTHS}か月後まで）。
               </p>
             </div>
@@ -425,8 +425,8 @@ export function ItemForm({
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="startAt" className="mb-1 block text-sm font-medium text-gray-700">
-              開始{isAllDay ? "日" : "日時"} <span className="text-red-600">*</span>
+            <label htmlFor="startAt" className="mb-1 block text-sm font-medium text-gray-300">
+              開始{isAllDay ? "日" : "日時"} <span className="text-red-400">*</span>
             </label>
             {isAllDay ? (
               <input
@@ -435,7 +435,7 @@ export function ItemForm({
                 required
                 value={startDateOnly}
                 onChange={(e) => setStartDateOnly(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               />
             ) : (
               <input
@@ -444,13 +444,13 @@ export function ItemForm({
                 required
                 value={startAtLocal}
                 onChange={(e) => setStartAtLocal(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               />
             )}
           </div>
           <div>
-            <label htmlFor="dueAt" className="mb-1 block text-sm font-medium text-gray-700">
-              期限{isAllDay ? "日" : "日時"} <span className="text-red-600">*</span>
+            <label htmlFor="dueAt" className="mb-1 block text-sm font-medium text-gray-300">
+              期限{isAllDay ? "日" : "日時"} <span className="text-red-400">*</span>
             </label>
             {isAllDay ? (
               <input
@@ -459,7 +459,7 @@ export function ItemForm({
                 required
                 value={dueDateOnly}
                 onChange={(e) => setDueDateOnly(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               />
             ) : (
               <input
@@ -468,7 +468,7 @@ export function ItemForm({
                 required
                 value={dueAtLocal}
                 onChange={(e) => setDueAtLocal(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
               />
             )}
           </div>
@@ -476,14 +476,14 @@ export function ItemForm({
       )}
 
       <div>
-        <label htmlFor="assignee" className="mb-1 block text-sm font-medium text-gray-700">
+        <label htmlFor="assignee" className="mb-1 block text-sm font-medium text-gray-300">
           担当者
         </label>
         <select
           id="assignee"
           value={assigneeId}
           onChange={(e) => setAssigneeId(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+          className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
         >
           <option value="">未割り当て</option>
           {members.map((member) => (
@@ -496,14 +496,14 @@ export function ItemForm({
 
       {initialItem && (
         <div>
-          <label htmlFor="status" className="mb-1 block text-sm font-medium text-gray-700">
+          <label htmlFor="status" className="mb-1 block text-sm font-medium text-gray-300">
             ステータス
           </label>
           <select
             id="status"
             value={status}
             onChange={(e) => setStatus(e.target.value as ItemStatus)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500"
+            className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
           >
             <option value="not_started">未対応</option>
             <option value="in_progress">対応中</option>
@@ -513,7 +513,7 @@ export function ItemForm({
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-red-400">
           {error}
         </p>
       )}
@@ -523,7 +523,7 @@ export function ItemForm({
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-12 flex-1 rounded-lg border border-gray-300 text-base font-semibold text-gray-700"
+            className="min-h-12 flex-1 rounded-lg border border-gray-600 text-base font-semibold text-gray-300"
           >
             キャンセル
           </button>

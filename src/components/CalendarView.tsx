@@ -82,7 +82,7 @@ export function buildCalendarDays(
 function dayTextColor(day: CalendarDay): string {
   if (day.holidayName || day.dayOfWeek === 0) return "text-red-400";
   if (day.dayOfWeek === 6) return "text-blue-400";
-  return "text-gray-700";
+  return "text-gray-300";
 }
 
 export function CalendarView({
@@ -110,7 +110,7 @@ export function CalendarView({
 
   return (
     <div>
-      <div className="grid grid-cols-7 text-center text-xs font-semibold text-gray-400">
+      <div className="grid grid-cols-7 text-center text-xs font-semibold text-gray-500">
         {WEEKDAY_LABELS.map((label) => (
           <div key={label} className="py-2">
             {label}
@@ -126,12 +126,12 @@ export function CalendarView({
             onClick={() => day.isCurrentMonth && onSelectDate(day.dateKey)}
             className={`flex min-h-14 flex-col items-center justify-center rounded-lg border text-sm ${
               !day.isCurrentMonth
-                ? "border-transparent text-gray-300"
+                ? "border-transparent text-gray-600"
                 : day.dateKey === selectedDateKey
-                  ? "border-blue-600 bg-blue-50 text-blue-700"
+                  ? "border-blue-600 bg-blue-950 text-blue-300"
                   : day.isToday
-                    ? "border-blue-300 text-blue-700"
-                    : `border-gray-100 ${dayTextColor(day)}`
+                    ? "border-blue-300 text-blue-300"
+                    : `border-gray-700 ${dayTextColor(day)}`
             }`}
           >
             <span>{day.dayOfMonth}</span>

@@ -7,9 +7,9 @@ const STATUS_LABEL: Record<ItemStatus, string> = {
 };
 
 const STATUS_CLASS: Record<ItemStatus, string> = {
-  not_started: "bg-gray-100 text-gray-700",
-  in_progress: "bg-blue-100 text-blue-700",
-  done: "bg-green-100 text-green-700",
+  not_started: "bg-gray-700 text-gray-300",
+  in_progress: "bg-blue-900 text-blue-300",
+  done: "bg-green-900 text-green-300",
 };
 
 export function StatusBadge({ status }: { status: ItemStatus }) {
@@ -22,7 +22,7 @@ export function StatusBadge({ status }: { status: ItemStatus }) {
 
 export function OverdueBadge() {
   return (
-    <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+    <span className="inline-flex items-center rounded-full bg-red-950 px-2.5 py-1 text-xs font-semibold text-red-300">
       期限超過
     </span>
   );

@@ -19,7 +19,7 @@ export function NavBar() {
   const items = isSuperAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-700 bg-gray-800">
       <ul className="mx-auto flex max-w-2xl">
         {items.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -28,7 +28,7 @@ export function NavBar() {
               <Link
                 href={item.href}
                 className={`flex min-h-14 flex-col items-center justify-center text-xs font-medium ${
-                  isActive ? "text-blue-600" : "text-gray-500"
+                  isActive ? "text-blue-400" : "text-gray-400"
                 }`}
                 aria-current={isActive ? "page" : undefined}
               >

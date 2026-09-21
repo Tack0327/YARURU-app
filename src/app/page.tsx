@@ -19,5 +19,5 @@ export default function RootPage() {
     }
   }, [loading, user, group, router]);
 
-  return <div className="flex min-h-screen items-center justify-center text-gray-500">読み込み中...</div>;
+  return <div className="flex min-h-screen items-center justify-center text-gray-400">読み込み中...</div>;
 }
