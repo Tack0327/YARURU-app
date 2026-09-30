@@ -269,9 +269,11 @@ function HomeContent() {
               <button
                 type="button"
                 onClick={() => setCalendarMode("months")}
-                className="text-base font-bold text-gray-100"
+                aria-label="月選択に戻る"
+                className="flex min-h-10 items-center gap-1 rounded-lg border border-gray-600 px-3 text-base font-bold text-gray-100"
               >
                 {year}年{month + 1}月
+                <span aria-hidden className="text-xs text-gray-400">▾</span>
               </button>
               <button onClick={goToNextMonth} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
                 ＞
