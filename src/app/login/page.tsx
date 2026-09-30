@@ -48,7 +48,10 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-4 text-center text-2xl font-bold text-gray-100">YARURU</h1>
+        <h1 className="mb-4 flex items-center justify-center gap-2 text-center text-2xl font-bold text-gray-100">
+          YARURU
+          <span className="text-xs font-normal text-gray-500">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
+        </h1>
         <label className="mb-8 flex items-center justify-center gap-2 text-sm text-gray-300">
           <input
             type="checkbox"
