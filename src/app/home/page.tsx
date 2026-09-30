@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { CalendarView } from "@/components/CalendarView";
+import { CalendarView, MonthGridView } from "@/components/CalendarView";
 import { DateNotes } from "@/components/DateNotes";
 import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -54,13 +54,17 @@ function HomeContent() {
 
   const now = new Date();
   const todayKey = dateKeyJst(now.toISOString());
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth());
+  const initialDateParam = searchParams.get("date");
+  const [year, setYear] = useState(initialDateParam ? Number(initialDateParam.slice(0, 4)) : now.getFullYear());
+  const [month, setMonth] = useState(initialDateParam ? Number(initialDateParam.slice(5, 7)) - 1 : now.getMonth());
   // 最初に開いたときから当日を選択した状態にしておく（今日の予定・メモがすぐ見えるようにするため）。
   // メモの編集画面から戻ってきたときは、date クエリパラメータで選択日付を復元する。
-  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(searchParams.get("date") || todayKey);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(initialDateParam || todayKey);
   // 「閉じる」を押しても選択日付そのものは覚えておき、「開く」で同じ日付をすぐ再表示できるようにする
   const [dateSectionOpen, setDateSectionOpen] = useState(true);
+  // カレンダーは月選択（months）から入り、月を選ぶと日表示（days）に切り替わる。
+  // dateクエリパラメータで特定の日付に戻ってきた場合は、最初から日表示にしておく。
+  const [calendarMode, setCalendarMode] = useState<"months" | "days">(initialDateParam ? "days" : "months");
   const [upcomingRange, setUpcomingRange] = useState<UpcomingRange>("month");
   const [hideCompleted, setHideCompleted] = useState(false);
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
@@ -83,6 +87,9 @@ function HomeContent() {
     if (dateParam) {
       setSelectedDateKey(dateParam);
       setDateSectionOpen(true);
+      setCalendarMode("days");
+      setYear(Number(dateParam.slice(0, 4)));
+      setMonth(Number(dateParam.slice(5, 7)) - 1);
     }
     // refreshTokenは、同じ日付に戻ってきたときでもこの効果を再実行させるための依存値
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,6 +148,27 @@ function HomeContent() {
     }
     return map;
   }, [visibleItems]);
+
+  const typesByYearMonth = useMemo(() => {
+    const map = new Map<string, Set<ItemType>>();
+    for (const item of visibleItems) {
+      const key = itemCalendarDateKey(item);
+      if (!key) continue;
+      const yearMonthKey = key.slice(0, 7);
+      const types = map.get(yearMonthKey) ?? new Set<ItemType>();
+      types.add(item.type);
+      map.set(yearMonthKey, types);
+    }
+    return map;
+  }, [visibleItems]);
+
+  function goToPrevYear() {
+    setYear((y) => y - 1);
+  }
+
+  function goToNextYear() {
+    setYear((y) => y + 1);
+  }
 
   function goToPrevMonth() {
     if (month === 0) {
@@ -209,34 +237,65 @@ function HomeContent() {
       </div>
 
       <section>
-        <div className="mb-2 flex items-center justify-between">
-          <button onClick={goToPrevMonth} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
-            ＜
-          </button>
-          <h2 className="text-base font-bold text-gray-100">
-            {year}年{month + 1}月
-          </h2>
-          <button onClick={goToNextMonth} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
-            ＞
-          </button>
-        </div>
-        <CalendarView
-          year={year}
-          month={month}
-          todayKey={todayKey}
-          selectedDateKey={dateSectionOpen ? selectedDateKey : null}
-          typesByDate={typesByDate}
-          noteDates={noteDates}
-          holidays={holidays}
-          onSelectDate={(dateKey) => {
-            if (selectedDateKey === dateKey && dateSectionOpen) {
-              setDateSectionOpen(false);
-            } else {
-              setSelectedDateKey(dateKey);
-              setDateSectionOpen(true);
-            }
-          }}
-        />
+        {calendarMode === "months" ? (
+          <>
+            <div className="mb-2 flex items-center justify-between">
+              <button onClick={goToPrevYear} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
+                ＜
+              </button>
+              <h2 className="text-base font-bold text-gray-100">{year}年</h2>
+              <button onClick={goToNextYear} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
+                ＞
+              </button>
+            </div>
+            <MonthGridView
+              year={year}
+              todayYear={now.getFullYear()}
+              todayMonth={now.getMonth()}
+              selectedMonth={null}
+              typesByYearMonth={typesByYearMonth}
+              onSelectMonth={(selectedMonth) => {
+                setMonth(selectedMonth);
+                setCalendarMode("days");
+              }}
+            />
+          </>
+        ) : (
+          <>
+            <div className="mb-2 flex items-center justify-between">
+              <button onClick={goToPrevMonth} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
+                ＜
+              </button>
+              <button
+                type="button"
+                onClick={() => setCalendarMode("months")}
+                className="text-base font-bold text-gray-100"
+              >
+                {year}年{month + 1}月
+              </button>
+              <button onClick={goToNextMonth} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
+                ＞
+              </button>
+            </div>
+            <CalendarView
+              year={year}
+              month={month}
+              todayKey={todayKey}
+              selectedDateKey={dateSectionOpen ? selectedDateKey : null}
+              typesByDate={typesByDate}
+              noteDates={noteDates}
+              holidays={holidays}
+              onSelectDate={(dateKey) => {
+                if (selectedDateKey === dateKey && dateSectionOpen) {
+                  setDateSectionOpen(false);
+                } else {
+                  setSelectedDateKey(dateKey);
+                  setDateSectionOpen(true);
+                }
+              }}
+            />
+          </>
+        )}
       </section>
 
       <label className="flex items-center gap-2 self-start text-sm text-gray-300">

@@ -149,3 +149,54 @@ export function CalendarView({
     </div>
   );
 }
+
+export function MonthGridView({
+  year,
+  todayYear,
+  todayMonth,
+  selectedMonth,
+  typesByYearMonth,
+  onSelectMonth,
+}: {
+  year: number;
+  todayYear: number;
+  /** 0=1月 ... 11=12月 */
+  todayMonth: number;
+  selectedMonth: number | null;
+  /** "YYYY-MM"→その月に存在する項目種別 */
+  typesByYearMonth: Map<string, Set<ItemType>>;
+  onSelectMonth: (month: number) => void;
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {Array.from({ length: 12 }, (_, month) => month).map((month) => {
+        const yearMonthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
+        const types = typesByYearMonth.get(yearMonthKey);
+        const isToday = year === todayYear && month === todayMonth;
+        return (
+          <button
+            key={month}
+            type="button"
+            onClick={() => onSelectMonth(month)}
+            className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-base font-semibold ${
+              month === selectedMonth
+                ? "border-blue-600 bg-blue-950 text-blue-300"
+                : isToday
+                  ? "border-blue-300 text-blue-300"
+                  : "border-gray-700 text-gray-300"
+            }`}
+          >
+            <span>{month + 1}月</span>
+            {types && types.size > 0 && (
+              <span className="flex gap-0.5">
+                {ALL_ITEM_TYPES.filter((type) => types.has(type)).map((type) => (
+                  <span key={type} className={`h-1.5 w-1.5 rounded-full ${ITEM_TYPE_ACCENT[type].dot}`} />
+                ))}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
