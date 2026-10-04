@@ -19,7 +19,6 @@ import {
   type MemberWithProfile,
 } from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
-import { VERSION_HISTORY } from "@/lib/versionHistory";
 
 function SettingsContent() {
   const router = useRouter();
@@ -477,21 +476,6 @@ function SettingsContent() {
             </button>
           )}
         </div>
-      </section>
-
-      <section>
-        <h2 className="mb-2 text-sm font-bold text-gray-400">Version history</h2>
-        <ul className="flex flex-col gap-2">
-          {VERSION_HISTORY.map((entry) => (
-            <li key={entry.version} className="rounded-lg border border-gray-700 px-4 py-3">
-              <div className="flex items-baseline gap-3">
-                <span className="text-sm font-bold text-gray-100">v{entry.version}</span>
-                <span className="text-xs text-gray-500">{entry.date}</span>
-              </div>
-              <p className="mt-1 text-sm text-gray-300">{entry.description}</p>
-            </li>
-          ))}
-        </ul>
       </section>
     </div>
   );

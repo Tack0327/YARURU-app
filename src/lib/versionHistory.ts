@@ -6,10 +6,11 @@ export type VersionHistoryEntry = {
 };
 
 /**
- * 設定画面に表示するバージョン履歴（新しい順）。
+ * 「バージョン」タブ（/versions）に表示するバージョン履歴（新しい順）。
  * package.jsonのversionを上げたら、先頭に1件追加する（tests/versionHistory.test.tsで一致を確認している）。
  */
 export const VERSION_HISTORY: VersionHistoryEntry[] = [
+  { version: "1.1.0", date: "2026-10-05", description: "Version historyを設定画面から独立させ、「バージョン」タブを追加" },
   { version: "1.0.0", date: "2026-10-04", description: "Official launch" },
   { version: "0.5.1", date: "2026-10-04", description: "セキュリティ修正（Next.jsの脆弱性に対応）" },
   {

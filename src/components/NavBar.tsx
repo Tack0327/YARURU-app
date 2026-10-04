@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/items", label: "チケット一覧" },
   { href: "/history", label: "履歴" },
   { href: "/settings", label: "設定" },
+  { href: "/versions", label: "バージョン" },
 ];
 
 const ADMIN_NAV_ITEM = { href: "/admin", label: "管理" };
