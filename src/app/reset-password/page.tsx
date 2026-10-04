@@ -22,6 +22,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [otherSessionsSignedOut, setOtherSessionsSignedOut] = useState(false);
   // リンクのトークンは1回しか使えないため、開発時のStrictModeで効果が2回走っても検証は1回だけにする
   const verifiedRef = useRef(false);
 
@@ -59,11 +60,11 @@ export default function ResetPasswordPage() {
 
     setSubmitting(true);
     const { error: updateError } = await supabase.auth.updateUser({ password });
-    setSubmitting(false);
 
     // 以前と同じパスワードはSupabaseが「same_password」として拒否するが、
     // 結果として入力したパスワードでログインできる状態に変わりはないため、更新成功として扱う
     if (updateError && updateError.code !== "same_password") {
+      setSubmitting(false);
       setError(
         updateError.code === "weak_password"
           ? "パスワードが簡単すぎます。別のパスワードを入力してください。"
@@ -71,6 +72,12 @@ export default function ResetPasswordPage() {
       );
       return;
     }
+
+    // パスワードが漏れた可能性がある人の再設定を想定し、この端末以外のログインをすべて無効にする。
+    // パスワードの更新自体は済んでいるため、ここで失敗しても完了画面は表示し、結果だけ伝える
+    const { error: signOutError } = await supabase.auth.signOut({ scope: "others" });
+    setOtherSessionsSignedOut(!signOutError);
+    setSubmitting(false);
     setDone(true);
   }
 
@@ -99,7 +106,12 @@ export default function ResetPasswordPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4 text-center">
         <h1 className="mb-4 text-2xl font-bold text-gray-100">パスワードを更新しました</h1>
-        <p className="mb-8 max-w-sm text-sm text-gray-300">次回から新しいパスワードでログインしてください。</p>
+        <p className="mb-2 max-w-sm text-sm text-gray-300">次回から新しいパスワードでログインしてください。</p>
+        <p className="mb-8 max-w-sm text-sm text-gray-300">
+          {otherSessionsSignedOut
+            ? "安全のため、この端末以外でのログインはすべて解除しました。"
+            : "他の端末でのログインを解除できませんでした。心当たりのない端末がある場合は、その端末でログアウトしてください。"}
+        </p>
         <Link
           href="/home"
           className="flex min-h-12 items-center justify-center rounded-lg bg-blue-600 px-6 text-base font-semibold text-white"

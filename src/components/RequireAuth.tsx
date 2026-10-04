@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
@@ -64,7 +65,13 @@ function TopBar() {
         </div>
       )}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-gray-700 bg-gray-800 px-4 py-2">
-        <span className="text-xs text-gray-500">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
+        <Link
+          href="/versions"
+          aria-label="Version historyを開く"
+          className="rounded-md px-1 text-xs text-gray-500 underline decoration-dotted underline-offset-2"
+        >
+          v{process.env.NEXT_PUBLIC_APP_VERSION}
+        </Link>
         <div className="flex items-center gap-3">
           <span className="truncate text-sm font-medium text-gray-300">{displayName}</span>
           <button

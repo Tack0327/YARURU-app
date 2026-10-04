@@ -84,6 +84,7 @@ export function BulkActionBar({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [choosingExport, setChoosingExport] = useState(false);
   const [csvPurpose, setCsvPurpose] = useState<CsvPurpose>("jira");
+  const [editorOpen, setEditorOpen] = useState(false);
 
   async function handleConfirmDelete() {
     await onDelete();
@@ -187,16 +188,28 @@ export function BulkActionBar({
     );
   }
 
+  const csvButtonClassName =
+    "min-h-10 whitespace-nowrap rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-300 disabled:opacity-50";
+
+  // スマホでは変更欄（担当者・状況・日付）が画面の大半を覆ってしまうため、「まとめて変更」を押すまで折りたたむ。
+  // 横幅に余裕のあるsm以上の画面では、これまでどおり常に表示する。
   return (
     <div className="fixed inset-x-0 bottom-14 z-40 border-t border-blue-800 bg-blue-950">
       <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
-        <p className="shrink-0 whitespace-nowrap text-sm font-semibold text-blue-200">{selectedCount}件選択中</p>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1">
+        <div className="flex items-center justify-between sm:shrink-0">
+          <p className="whitespace-nowrap text-sm font-semibold text-blue-200">{selectedCount}件選択中</p>
+          {editorOpen && (
+            <button type="button" onClick={() => setEditorOpen(false)} className="text-xs font-semibold text-blue-300 sm:hidden">
+              変更欄を閉じる
+            </button>
+          )}
+        </div>
+        <div className={`${editorOpen ? "grid" : "hidden"} grid-cols-2 gap-2 sm:flex sm:flex-1`}>
           <button
             type="button"
             onClick={() => setChoosingExport(true)}
             disabled={submitting || deleting}
-            className="min-h-10 whitespace-nowrap rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-300 disabled:opacity-50"
+            className={`hidden sm:block ${csvButtonClassName}`}
           >
             CSV出力
           </button>
@@ -232,11 +245,19 @@ export function BulkActionBar({
           <BulkDateInput label="期限日" value={dueDateKey} onChange={onDueDateChange} />
           {dueDateKey && <p className="col-span-2 text-xs text-blue-300">期限日は実施作業にのみ反映されます</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <button
+            type="button"
+            onClick={() => setChoosingExport(true)}
+            disabled={submitting || deleting}
+            className={`sm:hidden ${csvButtonClassName}`}
+          >
+            CSV出力
+          </button>
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-10 flex-1 rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-300 sm:flex-none"
+            className="min-h-10 rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-300"
           >
             選択解除
           </button>
@@ -244,15 +265,22 @@ export function BulkActionBar({
             type="button"
             onClick={() => setConfirmingDelete(true)}
             disabled={submitting || deleting}
-            className="min-h-10 flex-1 rounded-lg border border-red-300 px-4 text-sm font-semibold text-red-400 disabled:opacity-50 sm:flex-none"
+            className="min-h-10 rounded-lg border border-red-300 px-4 text-sm font-semibold text-red-400 disabled:opacity-50"
           >
             まとめて削除
           </button>
           <button
             type="button"
+            onClick={() => setEditorOpen(true)}
+            className={`${editorOpen ? "hidden" : "block"} min-h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white sm:hidden`}
+          >
+            まとめて変更
+          </button>
+          <button
+            type="button"
             onClick={onApply}
             disabled={submitting || deleting || (!assigneeId && !status && !startDateKey && !dueDateKey)}
-            className="min-h-10 flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50 sm:flex-none"
+            className={`${editorOpen ? "block" : "hidden"} min-h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50 sm:block`}
           >
             {submitting ? "変更中..." : "まとめて変更"}
           </button>

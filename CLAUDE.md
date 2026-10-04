@@ -49,7 +49,7 @@ YARURU/
 │   │   ├── api/export-csv/email/route.ts # 選択チケットのCSVをログイン中の本人宛にメール送信
 │   │   ├── history/page.tsx       # 完了履歴
 │   │   ├── settings/page.tsx      # グループ情報・メンバー
-│   │   └── versions/page.tsx      # Version history（ナビの「バージョン」タブ）
+│   │   └── versions/page.tsx      # Version history（ヘッダーのバージョン表示から開く）
 │   ├── components/
 │   │   ├── AuthProvider.tsx   # 認証状態・所属グループのContext
 │   │   ├── RequireAuth.tsx    # 未ログイン/未参加時のリダイレクト・共通ヘッダー(表示名・ログアウト)
@@ -66,7 +66,7 @@ YARURU/
 │   │   ├── notifications.ts # 通知要否の判定（送信処理は将来LINE連携用に未実装）
 │   │   ├── csvExport.ts   # チケットのJira取り込み用CSV生成（BOM付きUTF-8）
 │   │   ├── mailer.ts      # Gmail（SMTP_USER/SMTP_PASSWORD）経由のメール送信（サーバー専用）
-│   │   └── versionHistory.ts # 「バージョン」タブに表示するバージョン履歴（新しい順）
+│   │   └── versionHistory.ts # Version history画面に表示するバージョン履歴（新しい順）
 │   └── types/database.ts  # Supabaseテーブル・RPCの型定義
 ├── tests/
 │   ├── dateUtils.test.ts
@@ -164,7 +164,7 @@ YARURU/
 - 1回のコミットで複数の種類の変更を含む場合は、最も上位（左側）の桁のみ1つ上げ、それより下位の桁は0にリセットする（例：UX変更を伴う機能追加なら1桁目を+1し、2桁目・3桁目は0にする）。
 - **コミット前に、今回の変更内容がどれに該当するかをこのルールに照らして判断し、バージョン候補（例：「機能追加のため0.1.0→0.2.0にします」）を提示してユーザーに確認する。** ユーザーが承認した場合のみ、`package.json`の`version`を更新し、コミットに含める。承認が得られない場合や、ユーザーが別の値を指定した場合はそれに従う。
 - バージョンを変更しない（見た目にも影響しない些細な修正など）と判断した場合も、その理由を一言添えてユーザーに確認する。
-- **バージョンを上げるときは、「バージョン」タブ（`/versions`）の「Version history」に出す `src/lib/versionHistory.ts` の `VERSION_HISTORY` の先頭にも1件追加する**（バージョン・日付（Asia/Tokyoの`YYYY-MM-DD`）・内容）。内容の文言は、バージョン候補と一緒に案を提示してユーザーに確認する。`package.json`の`version`と先頭の履歴が一致しないと`tests/versionHistory.test.ts`が失敗する。
+- **バージョンを上げるときは、Version history画面（`/versions`。ヘッダーのバージョン表示から開く）に出す `src/lib/versionHistory.ts` の `VERSION_HISTORY` の先頭にも1件追加する**（バージョン・日付（Asia/Tokyoの`YYYY-MM-DD`）・内容）。内容の文言は、バージョン候補と一緒に案を提示してユーザーに確認する。`package.json`の`version`と先頭の履歴が一致しないと`tests/versionHistory.test.ts`が失敗する。
 - 履歴は0.x系も含めてすべて公開する（削除・省略しない）。内容はアプリの利用者向けに、何ができるようになったか・何を直したかを簡潔に書く。
 
 ## Git運用ルール

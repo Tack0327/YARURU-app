@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planBulkDateChange, sortItemsForHome, sortItemsForSelectedDate } from "@/lib/items";
+import { planBulkDateChange, sortItemsForHome, sortItemsForSelectedDate, summarizeBulkChange } from "@/lib/items";
 import { shouldNotifyForItem } from "@/lib/notifications";
 import type { Item } from "@/types/database";
 
@@ -168,5 +168,32 @@ describe("planBulkDateChange", () => {
     expect(updates).toEqual([
       { id: "todo", start_at: "2026-10-05T00:00:00.000Z", due_at: "2026-10-06T09:00:00.000Z" },
     ]);
+  });
+});
+
+describe("summarizeBulkChange", () => {
+  const base = {
+    selectedCount: 5,
+    assigneeChanged: false,
+    statusChanged: false,
+    startDateChanged: false,
+    dueDateChanged: false,
+    dateUpdatedCount: 0,
+  };
+
+  it("担当者・状況の変更は選択した件数で表示する", () => {
+    expect(summarizeBulkChange({ ...base, assigneeChanged: true, statusChanged: true })).toBe("5件の担当者・状況を変更しました");
+  });
+
+  it("期限日だけを変えて予定が対象外になった場合は、実際に変わった件数と対象外の件数を表示する", () => {
+    expect(summarizeBulkChange({ ...base, dueDateChanged: true, dateUpdatedCount: 3 })).toBe(
+      "3件の期限日を変更しました（予定2件は期限日が無いため日付を変更していません）"
+    );
+  });
+
+  it("状況と日付を同時に変えた場合はそれぞれの件数を並べる", () => {
+    expect(
+      summarizeBulkChange({ ...base, statusChanged: true, startDateChanged: true, dueDateChanged: true, dateUpdatedCount: 5 })
+    ).toBe("5件の状況を変更、5件の開始日・期限日を変更しました");
   });
 });

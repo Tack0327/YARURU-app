@@ -6,10 +6,16 @@ export type VersionHistoryEntry = {
 };
 
 /**
- * 「バージョン」タブ（/versions）に表示するバージョン履歴（新しい順）。
+ * Version history画面（/versions。ヘッダーのバージョン表示から開く）に表示するバージョン履歴（新しい順）。
  * package.jsonのversionを上げたら、先頭に1件追加する（tests/versionHistory.test.tsで一致を確認している）。
  */
 export const VERSION_HISTORY: VersionHistoryEntry[] = [
+  {
+    version: "1.3.0",
+    date: "2026-10-05",
+    description:
+      "パスワード再設定時に他の端末のログインを解除するように。一括変更の完了メッセージに実際の件数を表示。スマホでは一括変更の欄を折りたたみ表示に。Version historyはヘッダーのバージョン表示から開く形に変更",
+  },
   {
     version: "1.2.0",
     date: "2026-10-05",

@@ -15,6 +15,7 @@ import {
   bulkUpdateItems,
   fetchItems,
   planBulkDateChange,
+  summarizeBulkChange,
   type ItemFilters,
 } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
@@ -129,7 +130,16 @@ function ItemsContent() {
         status: bulkStatus ? (bulkStatus as ItemStatus) : undefined,
         dateUpdates: datePlan.updates,
       });
-      showToast(`${selectedIds.size}件をまとめて変更しました`);
+      showToast(
+        summarizeBulkChange({
+          selectedCount: selectedIds.size,
+          assigneeChanged: !!bulkAssigneeId,
+          statusChanged: !!bulkStatus,
+          startDateChanged: !!bulkStartDate,
+          dueDateChanged: !!bulkDueDate,
+          dateUpdatedCount: datePlan.updates.length,
+        })
+      );
       resetBulkInputs();
       await load();
     } catch {

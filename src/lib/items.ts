@@ -310,3 +310,30 @@ export function planBulkDateChange(
 
   return { updates, conflictIds };
 }
+
+/**
+ * 一括変更の完了メッセージを作る（純関数・テスト対象）。
+ * 期限日は実施作業にしか無いため、期限日だけを変えた場合は予定が対象外になり、選択件数と実際に変わった件数が異なる。
+ */
+export function summarizeBulkChange(params: {
+  selectedCount: number;
+  assigneeChanged: boolean;
+  statusChanged: boolean;
+  startDateChanged: boolean;
+  dueDateChanged: boolean;
+  /** planBulkDateChangeのupdatesの件数 */
+  dateUpdatedCount: number;
+}): string {
+  const parts: string[] = [];
+  const otherFields = [params.assigneeChanged && "担当者", params.statusChanged && "状況"].filter(Boolean);
+  if (otherFields.length > 0) parts.push(`${params.selectedCount}件の${otherFields.join("・")}を変更`);
+
+  const dateFields = [params.startDateChanged && "開始日", params.dueDateChanged && "期限日"].filter(Boolean);
+  let note = "";
+  if (dateFields.length > 0) {
+    parts.push(`${params.dateUpdatedCount}件の${dateFields.join("・")}を変更`);
+    const skippedCount = params.selectedCount - params.dateUpdatedCount;
+    if (skippedCount > 0) note = `（予定${skippedCount}件は期限日が無いため日付を変更していません）`;
+  }
+  return `${parts.join("、")}しました${note}`;
+}
