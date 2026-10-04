@@ -14,7 +14,11 @@ function VersionsContent() {
               <span className="text-sm font-bold text-gray-100">v{entry.version}</span>
               <span className="text-xs text-gray-500">{entry.date}</span>
             </div>
-            <p className="mt-1 text-sm text-gray-300">{entry.description}</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-gray-300">
+              {entry.changes.map((change) => (
+                <li key={change}>{change}</li>
+              ))}
+            </ul>
           </li>
         ))}
       </ul>
