@@ -9,7 +9,7 @@ import { DateNotes } from "@/components/DateNotes";
 import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useSelectableGroups } from "@/hooks/useSelectableGroups";
-import { dateKeyJst, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
+import { dateKeyJst, isOverdue, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { fetchHolidays } from "@/lib/holidays";
 import { fetchItems, sortItemsForHome, sortItemsForSelectedDate } from "@/lib/items";
@@ -21,7 +21,7 @@ function itemCalendarDateKey(item: Item): string {
   return dateKeyJst(item.due_at) || dateKeyJst(item.start_at);
 }
 
-/** ステータスに関わらず期限日時を過ぎているかどうか（完了非表示チェックがオフのとき、完了済みでも期限超過欄に出せるようステータスは見ない） */
+/** ステータスに関わらず期限日時を過ぎているかどうか（期限切れの完了済み項目を「今後の予定」にも出さないため、ステータスは見ない） */
 function isPastDue(item: Item, now: Date): boolean {
   return item.due_at !== null && new Date(item.due_at).getTime() < now.getTime();
 }
@@ -198,7 +198,7 @@ function HomeContent() {
 
   const memberNameOf = (id: string | null) => members.find((m) => m.profile_id === id)?.profile.display_name;
 
-  const overdueItems = sortItemsForHome(visibleItems.filter((item) => isPastDue(item, now)));
+  const overdueItems = sortItemsForHome(visibleItems.filter((item) => isOverdue(item.due_at, item.status, now)));
   const upcomingRangeEnd = upcomingRangeEndKey(upcomingRange, now);
   const upcomingItems = sortItemsForHome(
     visibleItems.filter(
@@ -356,7 +356,6 @@ function HomeContent() {
         items={overdueItems}
         emptyText="期限超過の項目はありません"
         memberNameOf={memberNameOf}
-        forceOverdue
       />
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -397,14 +396,11 @@ function Section({
   items,
   emptyText,
   memberNameOf,
-  forceOverdue = false,
 }: {
   title: string;
   items: Item[];
   emptyText: string;
   memberNameOf: (id: string | null) => string | undefined;
-  /** trueの場合、そのセクション内の全項目に「期限超過」バッジを表示する（完了済みでも一覧に出す欄で、表示の一貫性を保つため） */
-  forceOverdue?: boolean;
 }) {
   return (
     <section>
@@ -414,12 +410,7 @@ function Section({
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              assigneeName={memberNameOf(item.assignee_id)}
-              overdue={forceOverdue ? true : undefined}
-            />
+            <ItemCard key={item.id} item={item} assigneeName={memberNameOf(item.assignee_id)} />
           ))}
         </div>
       )}
