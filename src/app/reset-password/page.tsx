@@ -3,10 +3,16 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { PasswordInput } from "@/components/PasswordInput";
-import { MIN_PASSWORD_LENGTH, validateNewPassword } from "@/lib/password";
+import {
+  isRecoveryWindowOpen,
+  MIN_PASSWORD_LENGTH,
+  RECOVERY_SESSION_MAX_AGE_SECONDS,
+  validateNewPassword,
+} from "@/lib/password";
 import { createClient } from "@/lib/supabase/client";
 
-type LinkStatus = "checking" | "ready" | "invalid";
+/** notRecovery: ログインはしているが、再設定メールのリンクから開いていない（または開いてから時間が経ちすぎた） */
+type LinkStatus = "checking" | "ready" | "invalid" | "notRecovery";
 
 function readUrlParam(name: string): string | null {
   const query = new URLSearchParams(window.location.search).get(name);
@@ -25,6 +31,19 @@ export default function ResetPasswordPage() {
   const [otherSessionsSignedOut, setOtherSessionsSignedOut] = useState(false);
   // リンクのトークンは1回しか使えないため、開発時のStrictModeで効果が2回走っても検証は1回だけにする
   const verifiedRef = useRef(false);
+  // 再設定リンクが本物だと確認できた時刻。普段のログインのまま直接この画面を開いた場合はnullのまま
+  // （元のパスワードを知らない人でも変更できてしまうため、その場合は受け付けない）
+  const recoveryVerifiedAtRef = useRef<number | null>(null);
+
+  // Supabaseクライアントは、再設定リンクのコードを本物のログインに交換できたときだけPASSWORD_RECOVERYを通知する。
+  // URLに偽のコードを付けて開いても、交換に必要な情報がこのブラウザに無いため通知されない。
+  // 交換は通信を伴うため、下の確認処理より先に購読しておけば通知を取りこぼさない。
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") recoveryVerifiedAtRef.current = Date.now();
+    });
+    return () => listener.subscription.unsubscribe();
+  }, [supabase]);
 
   useEffect(() => {
     if (verifiedRef.current) return;
@@ -39,14 +58,27 @@ export default function ResetPasswordPage() {
       // メールテンプレートでtoken_hash形式のリンクにしている場合（別の端末でメールを開いても使える）
       const tokenHash = readUrlParam("token_hash");
       if (tokenHash) {
-        const { error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
-        setLinkStatus(verifyError ? "invalid" : "ready");
+        const { data, error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+        if (verifyError || !data.session) {
+          setLinkStatus("invalid");
+          return;
+        }
+        recoveryVerifiedAtRef.current = Date.now();
+        setLinkStatus("ready");
         return;
       }
 
       // 標準のリンク（?code=...）はSupabaseクライアントが初期化時に自動でセッションへ交換するので、その完了を待つ
       const { data } = await supabase.auth.getSession();
-      setLinkStatus(data.session ? "ready" : "invalid");
+      if (!data.session) {
+        setLinkStatus("invalid");
+        return;
+      }
+      // PASSWORD_RECOVERYの通知は初期化の完了直後に非同期で届くため、少しだけ待ってから判定する
+      for (let i = 0; i < 10 && recoveryVerifiedAtRef.current === null; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      }
+      setLinkStatus(isRecoveryWindowOpen(recoveryVerifiedAtRef.current) ? "ready" : "notRecovery");
     }
 
     verifyLink();
@@ -59,6 +91,13 @@ export default function ResetPasswordPage() {
     if (validationError) return;
 
     setSubmitting(true);
+    // 画面を開いたまま時間が経って有効時間を過ぎた場合に備え、更新の直前にも確認する
+    if (!isRecoveryWindowOpen(recoveryVerifiedAtRef.current)) {
+      setSubmitting(false);
+      setLinkStatus("notRecovery");
+      return;
+    }
+
     const { error: updateError } = await supabase.auth.updateUser({ password });
 
     // 以前と同じパスワードはSupabaseが「same_password」として拒否するが、
@@ -97,6 +136,24 @@ export default function ResetPasswordPage() {
         </Link>
         <Link href="/login" className="text-sm text-gray-400">
           ログイン画面へ戻る
+        </Link>
+      </div>
+    );
+  }
+
+  if (linkStatus === "notRecovery") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4 text-center">
+        <h1 className="mb-4 text-2xl font-bold text-gray-100">再設定メールのリンクから開いてください</h1>
+        <p className="mb-8 max-w-sm text-sm text-gray-300">
+          安全のため、パスワードの変更は、再設定メールのリンクを開いてから{RECOVERY_SESSION_MAX_AGE_SECONDS / 60}
+          分以内に限っています。ログイン中にパスワードを変えたい場合も、再設定メールを送信してリンクから開いてください。
+        </p>
+        <Link href="/forgot-password" className="mb-4 font-semibold text-blue-400">
+          再設定メールを送信する
+        </Link>
+        <Link href="/home" className="text-sm text-gray-400">
+          ホームへ戻る
         </Link>
       </div>
     );

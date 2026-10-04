@@ -12,6 +12,15 @@ export type VersionHistoryEntry = {
  */
 export const VERSION_HISTORY: VersionHistoryEntry[] = [
   {
+    version: "1.3.3",
+    date: "2026-10-05",
+    changes: [
+      "終日の実施作業が、期限日当日から「期限超過」と表示される不具合を修正",
+      "予定・実施作業が多くなると、一部が表示されなくなる不具合を修正",
+      "パスワードの変更を、再設定メールのリンクから開いた場合に限定（セキュリティ強化）",
+    ],
+  },
+  {
     version: "1.3.2",
     date: "2026-10-05",
     changes: ["セキュリティの修正（ログインしていない状態でアカウント操作ができてしまう問題に対応）"],

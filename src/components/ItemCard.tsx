@@ -50,7 +50,7 @@ export function ItemCard({
   selected?: boolean;
   onToggleSelect?: () => void;
 }) {
-  const overdue = overdueOverride ?? isOverdue(item.due_at, item.status);
+  const overdue = overdueOverride ?? isOverdue(item.due_at, item.status, new Date(), item.is_all_day);
   const schedule = scheduleText(item);
   const time = timeInfo(item);
 

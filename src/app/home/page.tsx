@@ -9,7 +9,7 @@ import { DateNotes } from "@/components/DateNotes";
 import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useSelectableGroups } from "@/hooks/useSelectableGroups";
-import { dateKeyJst, isOverdue, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
+import { dateKeyJst, dueDeadlineMs, isOverdue, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { fetchHolidays } from "@/lib/holidays";
 import { fetchItems, sortItemsForHome, sortItemsForSelectedDate } from "@/lib/items";
@@ -23,7 +23,7 @@ function itemCalendarDateKey(item: Item): string {
 
 /** ステータスに関わらず期限日時を過ぎているかどうか（期限切れの完了済み項目を「今後の予定」にも出さないため、ステータスは見ない） */
 function isPastDue(item: Item, now: Date): boolean {
-  return item.due_at !== null && new Date(item.due_at).getTime() < now.getTime();
+  return item.due_at !== null && dueDeadlineMs(item.due_at, item.is_all_day) <= now.getTime();
 }
 
 const UPCOMING_RANGE_OPTIONS: { value: UpcomingRange; label: string }[] = [
@@ -198,7 +198,9 @@ function HomeContent() {
 
   const memberNameOf = (id: string | null) => members.find((m) => m.profile_id === id)?.profile.display_name;
 
-  const overdueItems = sortItemsForHome(visibleItems.filter((item) => isOverdue(item.due_at, item.status, now)));
+  const overdueItems = sortItemsForHome(
+    visibleItems.filter((item) => isOverdue(item.due_at, item.status, now, item.is_all_day))
+  );
   const upcomingRangeEnd = upcomingRangeEndKey(upcomingRange, now);
   const upcomingItems = sortItemsForHome(
     visibleItems.filter(

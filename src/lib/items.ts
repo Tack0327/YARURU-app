@@ -37,31 +37,54 @@ function toOrFilterValue(likePattern: string): string {
   return `"${likePattern.replace(/"/g, '\\"')}"`;
 }
 
+/** Supabase（PostgREST）が1回のリクエストで返す最大件数の既定値 */
+export const FETCH_PAGE_SIZE = 1000;
+
+/**
+ * 1回の取得件数の上限（既定1000件）を超えても全件を取得できるよう、範囲を区切って最後まで取得する（テスト対象）。
+ * 上限を超えた分はエラーにならず黙って切り捨てられるため、件数が増えたときに一部の予定が表示されなくなるのを防ぐ。
+ * fetchPageは毎回新しいクエリを組み立てること（同じクエリを使い回すと範囲指定が上書きされないため）。
+ */
+export async function fetchAllPages<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  pageSize: number = FETCH_PAGE_SIZE
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await fetchPage(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
+}
+
 export async function fetchItems(
   supabase: Client,
   groupIds: string | string[],
   filters: ItemFilters = {},
   options: { includeCompletedHistory?: boolean } = {}
 ): Promise<Item[]> {
-  let query = supabase.from("items").select("*");
-  query = Array.isArray(groupIds) ? query.in("group_id", groupIds) : query.eq("group_id", groupIds);
-
-  if (filters.keyword) {
-    const keyword = toOrFilterValue(`%${escapeLikePattern(filters.keyword)}%`);
-    query = query.or(`title.ilike.${keyword},description.ilike.${keyword}`);
-  }
-  if (filters.assigneeId) query = query.eq("assignee_id", filters.assigneeId);
-  if (filters.type) query = query.eq("type", filters.type);
-  if (filters.status) query = query.eq("status", filters.status);
-
   const sortBy = filters.sortBy ?? "due_at";
   const ascending = (filters.sortDirection ?? "asc") === "asc";
-  query = query.order(sortBy, { ascending, nullsFirst: false });
 
-  const { data, error } = await query;
-  if (error) throw error;
+  const buildQuery = () => {
+    let query = supabase.from("items").select("*");
+    query = Array.isArray(groupIds) ? query.in("group_id", groupIds) : query.eq("group_id", groupIds);
 
-  const items = data ?? [];
+    if (filters.keyword) {
+      const keyword = toOrFilterValue(`%${escapeLikePattern(filters.keyword)}%`);
+      query = query.or(`title.ilike.${keyword},description.ilike.${keyword}`);
+    }
+    if (filters.assigneeId) query = query.eq("assignee_id", filters.assigneeId);
+    if (filters.type) query = query.eq("type", filters.type);
+    if (filters.status) query = query.eq("status", filters.status);
+
+    // 区切って取得する際に順序が揺れて重複・欠落しないよう、idを2番目の並び順に加えて順序を一意にする
+    return query.order(sortBy, { ascending, nullsFirst: false }).order("id", { ascending: true });
+  };
+
+  const items = await fetchAllPages((from, to) => buildQuery().range(from, to));
   if (options.includeCompletedHistory) return items;
 
   const now = new Date();
@@ -71,8 +94,8 @@ export async function fetchItems(
 /** ホーム画面向け: 期限超過を先頭に、その後は期限が近い順に並び替える（純関数・テスト対象） */
 export function sortItemsForHome(items: Item[], now: Date = new Date()): Item[] {
   return [...items].sort((a, b) => {
-    const aOverdue = isOverdue(a.due_at, a.status, now);
-    const bOverdue = isOverdue(b.due_at, b.status, now);
+    const aOverdue = isOverdue(a.due_at, a.status, now, a.is_all_day);
+    const bOverdue = isOverdue(b.due_at, b.status, now, b.is_all_day);
     if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
 
     const aTime = a.due_at ?? a.start_at;
@@ -97,14 +120,16 @@ export function sortItemsForSelectedDate(items: Item[]): Item[] {
 }
 
 export async function fetchCompletedHistory(supabase: Client, groupId: string): Promise<Item[]> {
-  const { data, error } = await supabase
-    .from("items")
-    .select("*")
-    .eq("group_id", groupId)
-    .eq("status", "done")
-    .order("completed_at", { ascending: false });
-  if (error) throw error;
-  return data ?? [];
+  return fetchAllPages((from, to) =>
+    supabase
+      .from("items")
+      .select("*")
+      .eq("group_id", groupId)
+      .eq("status", "done")
+      .order("completed_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 }
 
 /** 指定したIDの項目を取得する（RLSにより、自分が所属するグループの項目だけが返る） */

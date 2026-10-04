@@ -53,6 +53,22 @@ describe("dateUtils", () => {
     it("is false when due_at is in the future", () => {
       expect(isOverdue("2026-06-20T00:00:00.000Z", "in_progress", now)).toBe(false);
     });
+
+    // 終日の期限はAsia/Tokyoの00:00（UTCでは前日15:00）で保存されている
+    const allDayDueJune15 = "2026-06-14T15:00:00.000Z";
+
+    it("終日の項目は、期限日の当日中（JST 6/15 09:00）は期限超過にしない", () => {
+      expect(isOverdue(allDayDueJune15, "not_started", now, true)).toBe(false);
+    });
+
+    it("終日の項目は、期限日の翌日0時（JST 6/16 00:00）から期限超過にする", () => {
+      expect(isOverdue(allDayDueJune15, "not_started", new Date("2026-06-15T14:59:59.000Z"), true)).toBe(false);
+      expect(isOverdue(allDayDueJune15, "not_started", new Date("2026-06-15T15:00:00.000Z"), true)).toBe(true);
+    });
+
+    it("時刻指定の項目は、同じ値でも期限の時刻を過ぎた時点で期限超過にする", () => {
+      expect(isOverdue(allDayDueJune15, "not_started", now, false)).toBe(true);
+    });
   });
 
   describe("isHiddenAfterCompletion", () => {

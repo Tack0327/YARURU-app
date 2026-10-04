@@ -170,10 +170,27 @@ export function upcomingRangeEndKey(range: UpcomingRange, now: Date = new Date()
   return dateKeyFromUtcDate(new Date(Date.UTC(year, month - 1 + UPCOMING_RANGE_MONTHS[range], day)));
 }
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * 期限を過ぎたとみなす時刻（ミリ秒）を返す。
+ * 終日の項目は期限日のAsia/Tokyo 00:00で保存しているため、そのままだと期限日の朝0時から期限超過になってしまう。
+ * 終日のときは、期限日が終わる（翌日の00:00になる）までを期限内として扱う。
+ */
+export function dueDeadlineMs(dueAtIso: string, isAllDay: boolean): number {
+  const dueMs = new Date(dueAtIso).getTime();
+  return isAllDay ? dueMs + ONE_DAY_MS : dueMs;
+}
+
 /** 期限超過かどうか（未完了かつ期限が現在時刻より過去） */
-export function isOverdue(dueAtIso: string | null, status: string, now: Date = new Date()): boolean {
+export function isOverdue(
+  dueAtIso: string | null,
+  status: string,
+  now: Date = new Date(),
+  isAllDay: boolean = false
+): boolean {
   if (!dueAtIso || status === "done") return false;
-  return new Date(dueAtIso).getTime() < now.getTime();
+  return dueDeadlineMs(dueAtIso, isAllDay) <= now.getTime();
 }
 
 /** 完了から14日経過し、通常一覧から非表示にすべきか */

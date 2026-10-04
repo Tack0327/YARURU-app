@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { planBulkDateChange, sortItemsForHome, sortItemsForSelectedDate, summarizeBulkChange } from "@/lib/items";
+import {
+  fetchAllPages,
+  planBulkDateChange,
+  sortItemsForHome,
+  sortItemsForSelectedDate,
+  summarizeBulkChange,
+} from "@/lib/items";
 import { shouldNotifyForItem } from "@/lib/notifications";
 import type { Item } from "@/types/database";
 
@@ -195,5 +201,38 @@ describe("summarizeBulkChange", () => {
     expect(
       summarizeBulkChange({ ...base, statusChanged: true, startDateChanged: true, dueDateChanged: true, dateUpdatedCount: 5 })
     ).toBe("5件の状況を変更、5件の開始日・期限日を変更しました");
+  });
+});
+
+describe("fetchAllPages", () => {
+  const source = Array.from({ length: 7 }, (_, i) => i);
+  const fakeFetch = (requested: [number, number][]) => (from: number, to: number) => {
+    requested.push([from, to]);
+    return Promise.resolve({ data: source.slice(from, to + 1), error: null });
+  };
+
+  it("1回の上限を超える件数でも、範囲を区切って全件を取得する", async () => {
+    const requested: [number, number][] = [];
+    expect(await fetchAllPages(fakeFetch(requested), 3)).toEqual(source);
+    expect(requested).toEqual([
+      [0, 2],
+      [3, 5],
+      [6, 8],
+    ]);
+  });
+
+  it("件数がちょうど上限の倍数のときは、空のページを確認して終了する", async () => {
+    const requested: [number, number][] = [];
+    const rows = await fetchAllPages((from, to) => {
+      requested.push([from, to]);
+      return Promise.resolve({ data: source.slice(0, 6).slice(from, to + 1), error: null });
+    }, 3);
+    expect(rows).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(requested.length).toBe(3);
+  });
+
+  it("途中でエラーが返ったらそのエラーを投げる", async () => {
+    const failure = new Error("network");
+    await expect(fetchAllPages(() => Promise.resolve({ data: null, error: failure }), 3)).rejects.toBe(failure);
   });
 });
