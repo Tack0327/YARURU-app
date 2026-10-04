@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sortItemsForHome, sortItemsForSelectedDate } from "@/lib/items";
+import { planBulkDateChange, sortItemsForHome, sortItemsForSelectedDate } from "@/lib/items";
 import { shouldNotifyForItem } from "@/lib/notifications";
 import type { Item } from "@/types/database";
 
@@ -115,5 +115,58 @@ describe("shouldNotifyForItem", () => {
 
   it("is false when the due date is more than 24 hours away", () => {
     expect(shouldNotifyForItem({ status: "not_started", due_at: "2026-06-20T00:00:00.000Z" }, now)).toBe(false);
+  });
+});
+
+describe("planBulkDateChange", () => {
+  // JST 09:00開始〜18:00期限の実施作業（UTCでは00:00〜09:00）
+  const todo = makeItem({
+    id: "todo",
+    type: "todo",
+    start_at: "2026-10-01T00:00:00.000Z",
+    due_at: "2026-10-03T09:00:00.000Z",
+  });
+  // JST 10/2 13:00〜14:30の予定
+  const event = makeItem({
+    id: "event",
+    type: "event",
+    start_at: "2026-10-02T04:00:00.000Z",
+    end_at: "2026-10-02T05:30:00.000Z",
+  });
+
+  it("各項目の時刻を保ったまま期限日だけを変更する", () => {
+    const { updates, conflictIds } = planBulkDateChange([todo], { dueDateKey: "2026-10-10" });
+    expect(conflictIds).toEqual([]);
+    expect(updates).toEqual([{ id: "todo", due_at: "2026-10-10T09:00:00.000Z" }]);
+  });
+
+  it("予定は開始日の変更で終了時刻も同じ日付へ移し、期限日の指定は反映しない", () => {
+    const { updates } = planBulkDateChange([event], { startDateKey: "2026-10-20", dueDateKey: "2026-10-25" });
+    expect(updates).toEqual([
+      { id: "event", start_at: "2026-10-20T04:00:00.000Z", end_at: "2026-10-20T05:30:00.000Z" },
+    ]);
+  });
+
+  it("期限日だけを指定した場合、予定は変更対象に含めない", () => {
+    const { updates, conflictIds } = planBulkDateChange([todo, event], { dueDateKey: "2026-10-10" });
+    expect(updates.map((u) => u.id)).toEqual(["todo"]);
+    expect(conflictIds).toEqual([]);
+  });
+
+  it("変更後に期限が開始より前になる実施作業はconflictIdsに入れ、updatesに含めない", () => {
+    const { updates, conflictIds } = planBulkDateChange([todo, event], { startDateKey: "2026-10-05" });
+    expect(conflictIds).toEqual(["todo"]);
+    expect(updates.map((u) => u.id)).toEqual(["event"]);
+  });
+
+  it("開始日と期限日を同時に指定した場合は変更後の値どうしで判定する", () => {
+    const { updates, conflictIds } = planBulkDateChange([todo], {
+      startDateKey: "2026-10-05",
+      dueDateKey: "2026-10-06",
+    });
+    expect(conflictIds).toEqual([]);
+    expect(updates).toEqual([
+      { id: "todo", start_at: "2026-10-05T00:00:00.000Z", due_at: "2026-10-06T09:00:00.000Z" },
+    ]);
   });
 });

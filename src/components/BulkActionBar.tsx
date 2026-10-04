@@ -6,16 +6,49 @@ import type { MemberWithProfile } from "@/lib/families";
 /** 一括変更の「担当者なしにする」を表す特別値（空文字は「変更しない」と区別するため） */
 export const BULK_UNASSIGN_VALUE = "__unassign__";
 
+function BulkDateInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <div className="flex items-center gap-1 rounded-lg border border-gray-600 bg-gray-800 pl-2">
+      <span className="shrink-0 text-xs text-gray-400">{label}</span>
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        // カレンダーアイコン以外の場所をクリックしても日付選択UIが開くようにする
+        onClick={(e) => e.currentTarget.showPicker?.()}
+        aria-label={`${label}をまとめて変更`}
+        className="min-w-0 flex-1 bg-transparent py-2 text-sm text-gray-100"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label={`${label}を変更しない`}
+          className="shrink-0 px-2 text-sm text-gray-400"
+        >
+          ✕
+        </button>
+      ) : (
+        <span className="shrink-0 pr-2 text-xs text-gray-500">変更しない</span>
+      )}
+    </div>
+  );
+}
+
 export function BulkActionBar({
   selectedCount,
   members,
   assigneeId,
   status,
+  startDateKey,
+  dueDateKey,
   submitting,
   deleting,
   allowAssigneeChange = true,
   onAssigneeChange,
   onStatusChange,
+  onStartDateChange,
+  onDueDateChange,
   onApply,
   onDelete,
   onCancel,
@@ -24,12 +57,18 @@ export function BulkActionBar({
   members: MemberWithProfile[];
   assigneeId: string;
   status: string;
+  /** 空文字は「変更しない」 */
+  startDateKey: string;
+  /** 空文字は「変更しない」 */
+  dueDateKey: string;
   submitting: boolean;
   deleting: boolean;
   /** falseの場合、担当者の一括変更を無効にする（複数の家族グループを横断表示している場合など） */
   allowAssigneeChange?: boolean;
   onAssigneeChange: (value: string) => void;
   onStatusChange: (value: string) => void;
+  onStartDateChange: (value: string) => void;
+  onDueDateChange: (value: string) => void;
   onApply: () => void;
   onDelete: () => void | Promise<void>;
   onCancel: () => void;
@@ -104,6 +143,9 @@ export function BulkActionBar({
             <option value="in_progress">対応中</option>
             <option value="done">完了</option>
           </select>
+          <BulkDateInput label="開始日" value={startDateKey} onChange={onStartDateChange} />
+          <BulkDateInput label="期限日" value={dueDateKey} onChange={onDueDateChange} />
+          {dueDateKey && <p className="col-span-2 text-xs text-blue-300">期限日は実施作業にのみ反映されます</p>}
         </div>
         <div className="flex gap-2">
           <button
@@ -124,7 +166,7 @@ export function BulkActionBar({
           <button
             type="button"
             onClick={onApply}
-            disabled={submitting || deleting || (!assigneeId && !status)}
+            disabled={submitting || deleting || (!assigneeId && !status && !startDateKey && !dueDateKey)}
             className="min-h-10 flex-1 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50 sm:flex-none"
           >
             {submitting ? "変更中..." : "まとめて変更"}

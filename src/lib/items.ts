@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Item, ItemStatus, ItemType, RecurrenceFreq } from "@/types/database";
-import { combineDateAndTimeJst, generateRecurrenceDateKeys, isHiddenAfterCompletion, isOverdue } from "./dateUtils";
+import {
+  combineDateAndTimeJst,
+  generateRecurrenceDateKeys,
+  isHiddenAfterCompletion,
+  isOverdue,
+  timeOfDayJst,
+} from "./dateUtils";
 
 type Client = SupabaseClient<Database>;
 
@@ -228,4 +234,65 @@ export async function bulkUpdateItems(supabase: Client, itemIds: string[], input
 
   const { error } = await supabase.from("items").update(payload).in("id", itemIds);
   if (error) throw error;
+}
+
+/** 一括変更で指定する日付（Asia/Tokyoの「YYYY-MM-DD」。未指定の項目は変更しない） */
+export type BulkDateChange = {
+  startDateKey?: string;
+  dueDateKey?: string;
+};
+
+export type ItemDateUpdate = {
+  id: string;
+  start_at?: string | null;
+  end_at?: string | null;
+  due_at?: string | null;
+};
+
+/**
+ * 選択した項目の開始日・期限日を、各項目の時刻を保ったまま指定日付に変更した結果を求める（純関数・テスト対象）。
+ * 予定は単一日のイベントのため、開始日を変えると終了時刻も同じ日付へ移し、期限日の指定は反映しない。
+ * 実施作業で変更後に期限が開始より前になる項目はconflictIdsに入れ、updatesには含めない。
+ */
+export function planBulkDateChange(
+  items: Item[],
+  change: BulkDateChange
+): { updates: ItemDateUpdate[]; conflictIds: string[] } {
+  const updates: ItemDateUpdate[] = [];
+  const conflictIds: string[] = [];
+
+  for (const item of items) {
+    const update: ItemDateUpdate = { id: item.id };
+    if (change.startDateKey) {
+      update.start_at = combineDateAndTimeJst(change.startDateKey, timeOfDayJst(item.start_at));
+      if (item.type === "event" && item.end_at) {
+        update.end_at = combineDateAndTimeJst(change.startDateKey, timeOfDayJst(item.end_at));
+      }
+    }
+    if (change.dueDateKey && item.type === "todo") {
+      update.due_at = combineDateAndTimeJst(change.dueDateKey, timeOfDayJst(item.due_at));
+    }
+    if (Object.keys(update).length === 1) continue;
+
+    if (item.type === "todo") {
+      const startAt = update.start_at !== undefined ? update.start_at : item.start_at;
+      const dueAt = update.due_at !== undefined ? update.due_at : item.due_at;
+      if (startAt && dueAt && new Date(dueAt).getTime() < new Date(startAt).getTime()) {
+        conflictIds.push(item.id);
+        continue;
+      }
+    }
+    updates.push(update);
+  }
+
+  return { updates, conflictIds };
+}
+
+/** planBulkDateChangeで求めた日付の変更をDBに反映する（項目ごとに値が異なるため1件ずつ更新する） */
+export async function bulkUpdateItemDates(supabase: Client, updates: ItemDateUpdate[]): Promise<void> {
+  const results = await Promise.all(
+    updates.map(({ id, ...payload }) => supabase.from("items").update(payload).eq("id", id))
+  );
+  const failed = results.find((result) => result.error);
+  if (failed?.error) throw failed.error;
 }

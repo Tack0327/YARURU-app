@@ -9,7 +9,14 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { useSelectableGroups } from "@/hooks/useSelectableGroups";
 import { fetchGroupMembersForGroups, type MemberWithProfile } from "@/lib/families";
-import { bulkDeleteItems, bulkUpdateItems, fetchItems, type ItemFilters } from "@/lib/items";
+import {
+  bulkDeleteItems,
+  bulkUpdateItemDates,
+  bulkUpdateItems,
+  fetchItems,
+  planBulkDateChange,
+  type ItemFilters,
+} from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
 import type { Item, ItemStatus } from "@/types/database";
 
@@ -26,6 +33,8 @@ function ItemsContent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAssigneeId, setBulkAssigneeId] = useState("");
   const [bulkStatus, setBulkStatus] = useState("");
+  const [bulkStartDate, setBulkStartDate] = useState("");
+  const [bulkDueDate, setBulkDueDate] = useState("");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
@@ -63,11 +72,17 @@ function ItemsContent() {
   const memberNameOf = (id: string | null) => members.find((m) => m.profile_id === id)?.profile.display_name;
   const groupNameOf = (groupId: string) => groups.find((g) => g.id === groupId)?.name;
 
+  function resetBulkInputs() {
+    setBulkAssigneeId("");
+    setBulkStatus("");
+    setBulkStartDate("");
+    setBulkDueDate("");
+  }
+
   function handleToggleSelectionMode() {
     setSelectionMode((prev) => !prev);
     setSelectedIds(new Set());
-    setBulkAssigneeId("");
-    setBulkStatus("");
+    resetBulkInputs();
   }
 
   function handleToggleSelect(id: string) {
@@ -85,16 +100,36 @@ function ItemsContent() {
   }
 
   async function handleBulkApply() {
-    if (selectedIds.size === 0 || (!bulkAssigneeId && !bulkStatus)) return;
+    const hasDateChange = !!bulkStartDate || !!bulkDueDate;
+    if (selectedIds.size === 0 || (!bulkAssigneeId && !bulkStatus && !hasDateChange)) return;
+
+    const selectedItems = (items ?? []).filter((item) => selectedIds.has(item.id));
+    const datePlan = planBulkDateChange(selectedItems, {
+      startDateKey: bulkStartDate || undefined,
+      dueDateKey: bulkDueDate || undefined,
+    });
+    // 一部だけ変更されて中途半端な状態にならないよう、1件でも日付が矛盾する場合は担当者・ステータスも含めて何も変更しない
+    if (datePlan.conflictIds.length > 0) {
+      showToast(
+        `${datePlan.conflictIds.length}件で期限日が開始日より前になるため、変更を中止しました。日付を見直してください。`,
+        "error"
+      );
+      return;
+    }
+    if (!bulkAssigneeId && !bulkStatus && datePlan.updates.length === 0) {
+      showToast("期限日は実施作業にのみ設定できます。実施作業を選択してください。", "error");
+      return;
+    }
+
     setBulkSubmitting(true);
     try {
       await bulkUpdateItems(supabase, [...selectedIds], {
         assigneeId: bulkAssigneeId ? (bulkAssigneeId === BULK_UNASSIGN_VALUE ? null : bulkAssigneeId) : undefined,
         status: bulkStatus ? (bulkStatus as ItemStatus) : undefined,
       });
+      await bulkUpdateItemDates(supabase, datePlan.updates);
       showToast(`${selectedIds.size}件をまとめて変更しました`);
-      setBulkAssigneeId("");
-      setBulkStatus("");
+      resetBulkInputs();
       await load();
     } catch {
       showToast("まとめて変更できませんでした。もう一度お試しください。", "error");
@@ -157,7 +192,7 @@ function ItemsContent() {
               {selectedIds.size === items.length ? "すべて解除" : "すべて選択"}
             </button>
           )}
-          <div className={`flex flex-col gap-3 ${selectionMode && selectedIds.size > 0 ? "pb-24" : ""}`}>
+          <div className={`flex flex-col gap-3 ${selectionMode && selectedIds.size > 0 ? "pb-64" : ""}`}>
             {items.map((item) => (
               <ItemCard
                 key={item.id}
@@ -179,11 +214,15 @@ function ItemsContent() {
           members={members}
           assigneeId={bulkAssigneeId}
           status={bulkStatus}
+          startDateKey={bulkStartDate}
+          dueDateKey={bulkDueDate}
           submitting={bulkSubmitting}
           deleting={bulkDeleting}
           allowAssigneeChange={allowBulkAssigneeChange}
           onAssigneeChange={setBulkAssigneeId}
           onStatusChange={setBulkStatus}
+          onStartDateChange={setBulkStartDate}
+          onDueDateChange={setBulkDueDate}
           onApply={handleBulkApply}
           onDelete={handleBulkDelete}
           onCancel={() => setSelectedIds(new Set())}
