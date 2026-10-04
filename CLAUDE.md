@@ -31,7 +31,8 @@ YARURU/
 │       ├── 0002_functions_and_rls.sql       # トリガー・RPC関数・RLSポリシー
 │       ├── 0003_recurrence_and_allday.sql   # end_at・終日・繰り返し用の列追加
 │       ├── ...（0004〜0024：グループ管理・メモ・アカウント削除など）
-│       └── 0025_bulk_update_and_csv_email_limit.sql # 一括変更のトランザクション化・CSVメール送信の回数制限
+│       ├── 0025_bulk_update_and_csv_email_limit.sql # 一括変更のトランザクション化・CSVメール送信の回数制限
+│       └── 0026_block_anon_rpc.sql          # 未ログインからのRPC実行を禁止（アカウント削除・管理者委譲の権限チェック修正）
 ├── src/
 │   ├── proxy.ts           # Supabaseセッションの検証・更新（旧middleware）
 │   ├── app/
@@ -79,6 +80,10 @@ YARURU/
 - コンポーネントは役割ごとに分割し、Supabaseへのデータアクセスは `src/lib/` 配下の関数に集約する（UIコンポーネントから直接クエリを書かない）。
 - Supabaseとの接続情報（URL・匿名キー）は `.env.local` で管理し、コードに直接埋め込まない。`service_role` キーはクライアントに公開しない。
 - 予定・実施作業へのアクセスはSupabaseのRLS（行レベルセキュリティ）により「自分が所属する家族グループのメンバーのみ」に制限する。
+- **DB関数（RPC）を追加・変更するときは、必ず次を守る**（0026で修正した、未ログインでアカウント削除できた問題の再発防止）：
+  - SECURITY DEFINER関数は、先頭で `if auth.uid() is null then raise exception ...` として未ログインを拒否する。
+  - `auth.uid()` との比較は `<>` / `=` ではなく `is distinct from` / `is not distinct from` を使う（NULLのとき `<>` の結果はNULL＝偽扱いになり、権限チェックをすり抜けるため）。
+  - 関数を作ったら `revoke execute on function ... from public, anon;` と `grant execute on function ... to authenticated;` を必ず書く（Supabaseは既定でanonにも実行権限を付けるため）。
 - 完了日時の自動設定・解除と `updated_at` の更新は、DBトリガー（`items_before_update`）で一元管理し、クライアント実装に依存させない。
 - 完了から14日経過した項目は削除せず、クエリ条件（`isHiddenAfterCompletion`）で通常一覧から除外し、完了履歴画面からのみ確認できるようにする。
 - 繰り返し予定（毎日・毎週・隔週・月に一度）は、作成時に既定の期間（3か月）分の**独立した項目を一括生成**する方式とする。生成後の各項目は`recurrence_group_id`で緩く紐づくだけで、それぞれ個別に編集・完了・削除できる（シリーズ一括編集・無期限の繰り返しには対応しない）。
