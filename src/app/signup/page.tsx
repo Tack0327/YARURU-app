@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PasswordInput } from "@/components/PasswordInput";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
@@ -20,8 +21,8 @@ export default function SignupPage() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 6) {
-      setError("パスワードは6文字以上で入力してください。");
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`パスワードは${MIN_PASSWORD_LENGTH}文字以上で入力してください。`);
       return;
     }
 
@@ -101,12 +102,12 @@ export default function SignupPage() {
           </div>
           <div>
             <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-300">
-              パスワード（6文字以上）
+              パスワード（{MIN_PASSWORD_LENGTH}文字以上）
             </label>
             <PasswordInput
               id="password"
               autoComplete="new-password"
-              minLength={6}
+              minLength={MIN_PASSWORD_LENGTH}
               value={password}
               onChange={setPassword}
             />

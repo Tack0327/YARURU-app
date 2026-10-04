@@ -145,6 +145,17 @@ export type Database = {
         Returns: Note;
       };
       delete_account_with_transfers: { Args: { p_user_id: string; p_transfers: { group_id: string; new_owner_id: string }[] }; Returns: undefined };
+      bulk_update_items: {
+        Args: {
+          p_item_ids: string[];
+          p_set_assignee: boolean;
+          p_assignee_id: string | null;
+          p_status: ItemStatus | null;
+          p_date_updates: { id: string; start_at?: string | null; end_at?: string | null; due_at?: string | null }[];
+        };
+        Returns: undefined;
+      };
+      claim_csv_email_slot: { Args: Record<string, never>; Returns: "ok" | "too_soon" | "daily_limit" };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

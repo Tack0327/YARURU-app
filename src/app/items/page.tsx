@@ -8,11 +8,10 @@ import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { useSelectableGroups } from "@/hooks/useSelectableGroups";
-import { buildItemsCsv, CSV_EXPORT_MAX_ITEMS, csvFileName } from "@/lib/csvExport";
+import { buildItemsCsv, CSV_EXPORT_MAX_ITEMS, CSV_PURPOSE_LABEL, csvFileName, type CsvPurpose } from "@/lib/csvExport";
 import { fetchGroupMembersForGroups, type MemberWithProfile } from "@/lib/families";
 import {
   bulkDeleteItems,
-  bulkUpdateItemDates,
   bulkUpdateItems,
   fetchItems,
   planBulkDateChange,
@@ -128,8 +127,8 @@ function ItemsContent() {
       await bulkUpdateItems(supabase, [...selectedIds], {
         assigneeId: bulkAssigneeId ? (bulkAssigneeId === BULK_UNASSIGN_VALUE ? null : bulkAssigneeId) : undefined,
         status: bulkStatus ? (bulkStatus as ItemStatus) : undefined,
+        dateUpdates: datePlan.updates,
       });
-      await bulkUpdateItemDates(supabase, datePlan.updates);
       showToast(`${selectedIds.size}件をまとめて変更しました`);
       resetBulkInputs();
       await load();
@@ -140,19 +139,19 @@ function ItemsContent() {
     }
   }
 
-  function handleExportDownload() {
+  function handleExportDownload(purpose: CsvPurpose) {
     const selectedItems = (items ?? []).filter((item) => selectedIds.has(item.id));
-    const csv = buildItemsCsv(selectedItems, memberNameOf);
+    const csv = buildItemsCsv(selectedItems, memberNameOf, purpose);
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = csvFileName();
+    link.download = csvFileName(purpose);
     link.click();
     URL.revokeObjectURL(url);
-    showToast(`${selectedItems.length}件のCSVをダウンロードしました`);
+    showToast(`${selectedItems.length}件のCSV（${CSV_PURPOSE_LABEL[purpose]}）をダウンロードしました`);
   }
 
-  async function handleExportEmail(): Promise<boolean> {
+  async function handleExportEmail(purpose: CsvPurpose): Promise<boolean> {
     if (selectedIds.size > CSV_EXPORT_MAX_ITEMS) {
       showToast(`メールで送れるのは一度に${CSV_EXPORT_MAX_ITEMS}件までです。`, "error");
       return false;
@@ -162,14 +161,14 @@ function ItemsContent() {
       const response = await fetch("/api/export-csv/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemIds: [...selectedIds] }),
+        body: JSON.stringify({ itemIds: [...selectedIds], purpose }),
       });
       const result = (await response.json().catch(() => ({}))) as { count?: number; error?: string };
       if (!response.ok) {
         showToast(result.error ?? "メールの送信に失敗しました。", "error");
         return false;
       }
-      showToast(`${result.count}件のCSVをログイン中のメールアドレスに送信しました`);
+      showToast(`${result.count}件のCSV（${CSV_PURPOSE_LABEL[purpose]}）をログイン中のメールアドレスに送信しました`);
       return true;
     } catch {
       showToast("メールの送信に失敗しました。通信状況をご確認ください。", "error");

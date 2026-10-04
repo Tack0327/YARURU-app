@@ -29,7 +29,9 @@ YARURU/
 │   └── migrations/
 │       ├── 0001_init_schema.sql             # テーブル定義・制約・インデックス
 │       ├── 0002_functions_and_rls.sql       # トリガー・RPC関数・RLSポリシー
-│       └── 0003_recurrence_and_allday.sql   # end_at・終日・繰り返し用の列追加
+│       ├── 0003_recurrence_and_allday.sql   # end_at・終日・繰り返し用の列追加
+│       ├── ...（0004〜0024：グループ管理・メモ・アカウント削除など）
+│       └── 0025_bulk_update_and_csv_email_limit.sql # 一括変更のトランザクション化・CSVメール送信の回数制限
 ├── src/
 │   ├── proxy.ts           # Supabaseセッションの検証・更新（旧middleware）
 │   ├── app/
@@ -185,6 +187,7 @@ YARURU/
 - Vercelの「Git push時の自動デプロイ」は使わない方針（Production BranchはVercel側の初期設定のまま`main`だが、`git push`が本番に反映されるわけではなく、下記のVercel CLIによる明示的デプロイのみで本番を更新する）。
 - 本番への反映は、**Vercel CLI (`vercel --prod`) による手動デプロイのみ**で行う（Deploy Hookや専用ブランチは使わない。過去にIgnored Build Step・Deploy Hook・Production Branch分離を試したが、Deploy HookがIgnored Build Stepの影響を受けて機能しない等の問題があったため、この方式に統一した）。
 - ローカル環境は `vercel link` 済み（`tack0327/yaruru-app` に紐付け）。
+- Supabase CLIは使っていないため、`supabase/migrations/` に追加したSQLは**ユーザーがSupabase管理画面の「SQL Editor」で手動実行する**（開発環境と本番環境で同じSupabaseプロジェクトを使っている）。新しいDB関数・テーブルに依存するコードは、SQLの実行前に動かすとエラーになるため、マイグレーションを追加したときは実行手順を案内し、**実行済みであることをユーザーに確認してから本番デプロイする**。
 - 社内ネットワークではNode.js/curlのTLS証明書失効確認でエラーになるため、Vercel CLIを実行する際は環境変数 `NODE_OPTIONS="--use-system-ca"` を付与すること。
 - **コードをGitHubにpushした後は、会話が途中でリセットされていても必ず次の手順を踏むこと（省略しない）：**
   1. `NODE_OPTIONS="--use-system-ca" npm run dev` で開発サーバーを起動する（既に起動中ならそれを使う。`package.json`の`version`を変えた場合は再起動しないと画面のバージョン表示に反映されない）。

@@ -232,19 +232,30 @@ export async function bulkDeleteItems(supabase: Client, itemIds: string[]): Prom
   if (error) throw error;
 }
 
-export type BulkUpdateItemInput = Partial<{
-  assigneeId: string | null;
-  status: ItemStatus;
-}>;
+export type BulkUpdateItemInput = {
+  /** undefinedは「変更しない」、nullは「担当者なしにする」 */
+  assigneeId?: string | null;
+  status?: ItemStatus;
+  /** planBulkDateChangeで求めた日付の変更 */
+  dateUpdates?: ItemDateUpdate[];
+};
 
-/** 一覧で選択した複数項目の担当者・ステータスをまとめて変更する */
+/**
+ * 一覧で選択した複数項目の担当者・ステータス・日付をまとめて変更する。
+ * 途中で失敗して一部だけ変更された状態にならないよう、DB関数（bulk_update_items）で1回のトランザクションとして行う。
+ */
 export async function bulkUpdateItems(supabase: Client, itemIds: string[], input: BulkUpdateItemInput): Promise<void> {
-  const payload: Database["public"]["Tables"]["items"]["Update"] = {};
-  if (input.assigneeId !== undefined) payload.assignee_id = input.assigneeId;
-  if (input.status !== undefined) payload.status = input.status;
-  if (itemIds.length === 0 || Object.keys(payload).length === 0) return;
+  const setAssignee = input.assigneeId !== undefined;
+  const dateUpdates = input.dateUpdates ?? [];
+  if (itemIds.length === 0 || (!setAssignee && input.status === undefined && dateUpdates.length === 0)) return;
 
-  const { error } = await supabase.from("items").update(payload).in("id", itemIds);
+  const { error } = await supabase.rpc("bulk_update_items", {
+    p_item_ids: itemIds,
+    p_set_assignee: setAssignee,
+    p_assignee_id: input.assigneeId ?? null,
+    p_status: input.status ?? null,
+    p_date_updates: dateUpdates,
+  });
   if (error) throw error;
 }
 
@@ -298,13 +309,4 @@ export function planBulkDateChange(
   }
 
   return { updates, conflictIds };
-}
-
-/** planBulkDateChangeで求めた日付の変更をDBに反映する（項目ごとに値が異なるため1件ずつ更新する） */
-export async function bulkUpdateItemDates(supabase: Client, updates: ItemDateUpdate[]): Promise<void> {
-  const results = await Promise.all(
-    updates.map(({ id, ...payload }) => supabase.from("items").update(payload).eq("id", id))
-  );
-  const failed = results.find((result) => result.error);
-  if (failed?.error) throw failed.error;
 }

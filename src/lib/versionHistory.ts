@@ -10,6 +10,12 @@ export type VersionHistoryEntry = {
  * package.jsonのversionを上げたら、先頭に1件追加する（tests/versionHistory.test.tsで一致を確認している）。
  */
 export const VERSION_HISTORY: VersionHistoryEntry[] = [
+  {
+    version: "1.2.0",
+    date: "2026-10-05",
+    description:
+      "CSV出力でJira取り込み用／Excel閲覧用を選べるように（Excelで数式が実行されない対策）。一括変更の失敗時に一部だけ変更される不具合を修正し、メール送信に回数制限を追加",
+  },
   { version: "1.1.0", date: "2026-10-05", description: "Version historyを設定画面から独立させ、「バージョン」タブを追加" },
   { version: "1.0.0", date: "2026-10-04", description: "Official launch" },
   { version: "0.5.1", date: "2026-10-04", description: "セキュリティ修正（Next.jsの脆弱性に対応）" },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CSV_PURPOSE_LABEL, type CsvPurpose } from "@/lib/csvExport";
 import type { MemberWithProfile } from "@/lib/families";
 
 /** 一括変更の「担当者なしにする」を表す特別値（空文字は「変更しない」と区別するため） */
@@ -75,13 +76,14 @@ export function BulkActionBar({
   onDueDateChange: (value: string) => void;
   onApply: () => void;
   onDelete: () => void | Promise<void>;
-  onExportDownload: () => void;
+  onExportDownload: (purpose: CsvPurpose) => void;
   /** 送信に成功したらtrueを返す */
-  onExportEmail: () => Promise<boolean>;
+  onExportEmail: (purpose: CsvPurpose) => Promise<boolean>;
   onCancel: () => void;
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [choosingExport, setChoosingExport] = useState(false);
+  const [csvPurpose, setCsvPurpose] = useState<CsvPurpose>("jira");
 
   async function handleConfirmDelete() {
     await onDelete();
@@ -89,22 +91,42 @@ export function BulkActionBar({
   }
 
   function handleExportDownload() {
-    onExportDownload();
+    onExportDownload(csvPurpose);
     setChoosingExport(false);
   }
 
   async function handleExportEmail() {
-    if (await onExportEmail()) setChoosingExport(false);
+    if (await onExportEmail(csvPurpose)) setChoosingExport(false);
   }
 
   if (choosingExport) {
     return (
       <div className="fixed inset-x-0 bottom-14 z-40 border-t border-blue-800 bg-blue-950">
-        <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
-          <p className="flex-1 text-sm font-semibold text-blue-200">
-            選択した{selectedCount}件をCSV（Jira取り込み用）で出力します
+        <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3">
+          <p className="text-sm font-semibold text-blue-200">選択した{selectedCount}件をCSVで出力します</p>
+          <div role="radiogroup" aria-label="CSVの用途" className="grid grid-cols-2 gap-2">
+            {(["jira", "excel"] as CsvPurpose[]).map((purpose) => (
+              <button
+                key={purpose}
+                type="button"
+                role="radio"
+                aria-checked={csvPurpose === purpose}
+                onClick={() => setCsvPurpose(purpose)}
+                disabled={exporting}
+                className={`min-h-10 rounded-lg border px-3 text-sm font-semibold disabled:opacity-50 ${
+                  csvPurpose === purpose ? "border-blue-400 bg-blue-900 text-blue-100" : "border-gray-600 text-gray-300"
+                }`}
+              >
+                {CSV_PURPOSE_LABEL[purpose]}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-blue-300">
+            {csvPurpose === "jira"
+              ? "内容をそのまま出力します。Excelで開く場合は「Excel閲覧用」を選んでください。"
+              : "「= + - @」で始まる値は、数式として実行されないよう先頭に「'」を付けます。"}
           </p>
-          <div className="grid grid-cols-3 gap-2 sm:flex">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:justify-end">
             <button
               type="button"
               onClick={() => setChoosingExport(false)}

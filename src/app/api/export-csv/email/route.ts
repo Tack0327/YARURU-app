@@ -1,6 +1,13 @@
 import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
-import { buildItemsCsv, CSV_EXPORT_MAX_ITEMS, csvFileName } from "@/lib/csvExport";
+import {
+  buildItemsCsv,
+  CSV_EMAIL_DAILY_LIMIT,
+  CSV_EMAIL_MIN_INTERVAL_SECONDS,
+  CSV_PURPOSE_LABEL,
+  csvFileName,
+  parseCsvEmailRequest,
+} from "@/lib/csvExport";
 import { fetchGroupMembersForGroups } from "@/lib/families";
 import { fetchItemsByIds } from "@/lib/items";
 import { MailerNotConfiguredError, sendMailWithAttachment } from "@/lib/mailer";
@@ -26,30 +33,37 @@ export async function POST(request: NextRequest) {
   const email = auth.user?.email;
   if (!email) return errorResponse("ログインしてください。", 401);
 
-  const body = (await request.json().catch(() => null)) as { itemIds?: unknown } | null;
-  const itemIds = body?.itemIds;
-  if (
-    !Array.isArray(itemIds) ||
-    itemIds.length === 0 ||
-    itemIds.length > CSV_EXPORT_MAX_ITEMS ||
-    !itemIds.every((id) => typeof id === "string")
-  ) {
-    return errorResponse(`チケットを1〜${CSV_EXPORT_MAX_ITEMS}件選択してください。`, 400);
-  }
+  const parsed = parseCsvEmailRequest(await request.json().catch(() => null));
+  if (!parsed.ok) return errorResponse(parsed.error, 400);
+  const { itemIds, purpose } = parsed;
 
   try {
     const items = await fetchItemsByIds(supabase, itemIds);
     if (items.length === 0) return errorResponse("出力できるチケットがありません。", 404);
 
+    // 連打でGmailの1日の送信上限を使い切り、パスワード再設定メールまで届かなくなることを防ぐ
+    const { data: slot, error: slotError } = await supabase.rpc("claim_csv_email_slot");
+    if (slotError) throw slotError;
+    if (slot === "too_soon") {
+      return errorResponse(`続けて送信できません。${CSV_EMAIL_MIN_INTERVAL_SECONDS}秒ほど待ってから再度お試しください。`, 429);
+    }
+    if (slot === "daily_limit") {
+      return errorResponse(`メールで送れるのは1日${CSV_EMAIL_DAILY_LIMIT}回までです。ダウンロードをご利用ください。`, 429);
+    }
+
     const members = await fetchGroupMembersForGroups(supabase, [...new Set(items.map((item) => item.group_id))]);
     const memberNameOf = (id: string | null) => members.find((m) => m.profile_id === id)?.profile.display_name;
-    const csv = buildItemsCsv(items, memberNameOf);
+    const csv = buildItemsCsv(items, memberNameOf, purpose);
 
+    const note =
+      purpose === "jira"
+        ? "Jiraの「CSVのインポート」で取り込む際は、日付形式に「yyyy-MM-dd HH:mm」を指定してください。"
+        : "Excelで開いたときに数式として実行されないよう、「= + - @」で始まる値の先頭に「'」を付けています。";
     await sendMailWithAttachment({
       to: email,
-      subject: `【YARURU】チケットCSV（${items.length}件）`,
-      text: `YARURUで選択したチケット${items.length}件のCSVを添付します。\nJiraの「CSVのインポート」で取り込む際は、日付形式に「yyyy-MM-dd HH:mm」を指定してください。`,
-      attachment: { filename: csvFileName(), content: csv, contentType: "text/csv; charset=utf-8" },
+      subject: `【YARURU】チケットCSV・${CSV_PURPOSE_LABEL[purpose]}（${items.length}件）`,
+      text: `YARURUで選択したチケット${items.length}件のCSV（${CSV_PURPOSE_LABEL[purpose]}）を添付します。\n${note}`,
+      attachment: { filename: csvFileName(purpose), content: csv, contentType: "text/csv; charset=utf-8" },
     });
 
     return NextResponse.json({ count: items.length });
