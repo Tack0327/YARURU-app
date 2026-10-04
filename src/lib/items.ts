@@ -107,6 +107,18 @@ export async function fetchCompletedHistory(supabase: Client, groupId: string): 
   return data ?? [];
 }
 
+/** 指定したIDの項目を取得する（RLSにより、自分が所属するグループの項目だけが返る） */
+export async function fetchItemsByIds(supabase: Client, itemIds: string[]): Promise<Item[]> {
+  if (itemIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("items")
+    .select("*")
+    .in("id", itemIds)
+    .order("due_at", { ascending: true, nullsFirst: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function fetchItem(supabase: Client, itemId: string): Promise<Item | null> {
   const { data, error } = await supabase.from("items").select("*").eq("id", itemId).maybeSingle();
   if (error) throw error;

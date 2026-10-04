@@ -8,6 +8,7 @@ import { ItemCard } from "@/components/ItemCard";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { useSelectableGroups } from "@/hooks/useSelectableGroups";
+import { buildItemsCsv, CSV_EXPORT_MAX_ITEMS, csvFileName } from "@/lib/csvExport";
 import { fetchGroupMembersForGroups, type MemberWithProfile } from "@/lib/families";
 import {
   bulkDeleteItems,
@@ -37,6 +38,7 @@ function ItemsContent() {
   const [bulkDueDate, setBulkDueDate] = useState("");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // 複数の家族グループを横断表示している間は、担当者の一括変更を許可しない
   // （別グループのメンバーを担当者に設定できてしまうため。家族を1つに絞り込んだ場合のみ許可する）
@@ -138,6 +140,45 @@ function ItemsContent() {
     }
   }
 
+  function handleExportDownload() {
+    const selectedItems = (items ?? []).filter((item) => selectedIds.has(item.id));
+    const csv = buildItemsCsv(selectedItems, memberNameOf);
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = csvFileName();
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast(`${selectedItems.length}件のCSVをダウンロードしました`);
+  }
+
+  async function handleExportEmail(): Promise<boolean> {
+    if (selectedIds.size > CSV_EXPORT_MAX_ITEMS) {
+      showToast(`メールで送れるのは一度に${CSV_EXPORT_MAX_ITEMS}件までです。`, "error");
+      return false;
+    }
+    setExporting(true);
+    try {
+      const response = await fetch("/api/export-csv/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemIds: [...selectedIds] }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { count?: number; error?: string };
+      if (!response.ok) {
+        showToast(result.error ?? "メールの送信に失敗しました。", "error");
+        return false;
+      }
+      showToast(`${result.count}件のCSVをログイン中のメールアドレスに送信しました`);
+      return true;
+    } catch {
+      showToast("メールの送信に失敗しました。通信状況をご確認ください。", "error");
+      return false;
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function handleBulkDelete() {
     if (selectedIds.size === 0) return;
     setBulkDeleting(true);
@@ -162,7 +203,7 @@ function ItemsContent() {
             onClick={handleToggleSelectionMode}
             className="flex min-h-10 items-center justify-center rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-300"
           >
-            {selectionMode ? "選択をやめる" : "まとめて変更"}
+            {selectionMode ? "選択をやめる" : "チケット選択"}
           </button>
           <Link
             href="/items/new"
@@ -218,6 +259,7 @@ function ItemsContent() {
           dueDateKey={bulkDueDate}
           submitting={bulkSubmitting}
           deleting={bulkDeleting}
+          exporting={exporting}
           allowAssigneeChange={allowBulkAssigneeChange}
           onAssigneeChange={setBulkAssigneeId}
           onStatusChange={setBulkStatus}
@@ -225,6 +267,8 @@ function ItemsContent() {
           onDueDateChange={setBulkDueDate}
           onApply={handleBulkApply}
           onDelete={handleBulkDelete}
+          onExportDownload={handleExportDownload}
+          onExportEmail={handleExportEmail}
           onCancel={() => setSelectedIds(new Set())}
         />
       )}

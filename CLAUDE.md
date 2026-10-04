@@ -44,6 +44,7 @@ YARURU/
 │   │   ├── items/page.tsx         # 一覧（検索・絞り込み・並び替え）
 │   │   ├── items/new/page.tsx
 │   │   ├── items/[id]/page.tsx    # 詳細・編集・削除
+│   │   ├── api/export-csv/email/route.ts # 選択チケットのCSVをログイン中の本人宛にメール送信
 │   │   ├── history/page.tsx       # 完了履歴
 │   │   └── settings/page.tsx      # グループ情報・メンバー
 │   ├── components/
@@ -59,7 +60,9 @@ YARURU/
 │   │   ├── items.ts       # 予定・実施作業のCRUD・検索絞り込み並び替え・繰り返し一括作成
 │   │   ├── families.ts    # 家族グループの作成・参加・メンバー取得
 │   │   ├── dateUtils.ts   # Asia/Tokyo変換・期限超過・14日非表示判定・繰り返し日付生成
-│   │   └── notifications.ts # 通知要否の判定（送信処理は将来LINE連携用に未実装）
+│   │   ├── notifications.ts # 通知要否の判定（送信処理は将来LINE連携用に未実装）
+│   │   ├── csvExport.ts   # チケットのJira取り込み用CSV生成（BOM付きUTF-8）
+│   │   └── mailer.ts      # Gmail（SMTP_USER/SMTP_PASSWORD）経由のメール送信（サーバー専用）
 │   └── types/database.ts  # Supabaseテーブル・RPCの型定義
 ├── tests/
 │   ├── dateUtils.test.ts
@@ -76,7 +79,7 @@ YARURU/
 - 完了から14日経過した項目は削除せず、クエリ条件（`isHiddenAfterCompletion`）で通常一覧から除外し、完了履歴画面からのみ確認できるようにする。
 - 繰り返し予定（毎日・毎週・隔週・月に一度）は、作成時に既定の期間（3か月）分の**独立した項目を一括生成**する方式とする。生成後の各項目は`recurrence_group_id`で緩く紐づくだけで、それぞれ個別に編集・完了・削除できる（シリーズ一括編集・無期限の繰り返しには対応しない）。
 - 予定(event)は単一日のイベントとして扱い、日付＋開始時間＋終了時間で管理する（複数日にまたがる予定は扱わない）。実施作業(todo)は開始日時〜期限日時の期間を持てる。どちらも`is_all_day`で終日（時間未指定）を表現できる。
-- 動作確認は `npm run dev` で開発サーバーを起動して行う。
+- 動作確認は `npm run dev` で開発サーバーを起動して行う。社内ネットワークでは、サーバー側（Route Handler・proxy）からSupabaseやGmailへの通信が証明書エラー（`SELF_SIGNED_CERT_IN_CHAIN`）になるため、必ず `NODE_OPTIONS="--use-system-ca" npm run dev` で起動する（付けないとサーバー側の認証確認が失敗し、APIが「ログインしてください」を返す）。
 
 ## コーディング規約
 
@@ -153,7 +156,7 @@ YARURU/
 - ローカル環境は `vercel link` 済み（`tack0327/yaruru-app` に紐付け）。
 - 社内ネットワークではNode.js/curlのTLS証明書失効確認でエラーになるため、Vercel CLIを実行する際は環境変数 `NODE_OPTIONS="--use-system-ca"` を付与すること。
 - **コードをGitHubにpushした後は、会話が途中でリセットされていても必ず次の手順を踏むこと（省略しない）：**
-  1. `npm run dev` で開発サーバーを起動する（既に起動中ならそれを使う）。
+  1. `NODE_OPTIONS="--use-system-ca" npm run dev` で開発サーバーを起動する（既に起動中ならそれを使う。`package.json`の`version`を変えた場合は再起動しないと画面のバージョン表示に反映されない）。
   2. 起動ログに出る開発環境のURL（例: `http://localhost:3000`）をリンクとしてユーザーに提示し、動作確認を依頼する。
   3. ユーザーから問題ない旨の返答があったら、**「本番環境にデプロイしますか？」と確認する。**
   4. 「デプロイして」等の明確な依頼があった場合のみ、次のコマンドで本番デプロイを実行する：

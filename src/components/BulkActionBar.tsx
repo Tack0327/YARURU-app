@@ -44,6 +44,7 @@ export function BulkActionBar({
   dueDateKey,
   submitting,
   deleting,
+  exporting,
   allowAssigneeChange = true,
   onAssigneeChange,
   onStatusChange,
@@ -51,6 +52,8 @@ export function BulkActionBar({
   onDueDateChange,
   onApply,
   onDelete,
+  onExportDownload,
+  onExportEmail,
   onCancel,
 }: {
   selectedCount: number;
@@ -63,6 +66,7 @@ export function BulkActionBar({
   dueDateKey: string;
   submitting: boolean;
   deleting: boolean;
+  exporting: boolean;
   /** falseの場合、担当者の一括変更を無効にする（複数の家族グループを横断表示している場合など） */
   allowAssigneeChange?: boolean;
   onAssigneeChange: (value: string) => void;
@@ -71,13 +75,64 @@ export function BulkActionBar({
   onDueDateChange: (value: string) => void;
   onApply: () => void;
   onDelete: () => void | Promise<void>;
+  onExportDownload: () => void;
+  /** 送信に成功したらtrueを返す */
+  onExportEmail: () => Promise<boolean>;
   onCancel: () => void;
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [choosingExport, setChoosingExport] = useState(false);
 
   async function handleConfirmDelete() {
     await onDelete();
     setConfirmingDelete(false);
+  }
+
+  function handleExportDownload() {
+    onExportDownload();
+    setChoosingExport(false);
+  }
+
+  async function handleExportEmail() {
+    if (await onExportEmail()) setChoosingExport(false);
+  }
+
+  if (choosingExport) {
+    return (
+      <div className="fixed inset-x-0 bottom-14 z-40 border-t border-blue-800 bg-blue-950">
+        <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
+          <p className="flex-1 text-sm font-semibold text-blue-200">
+            選択した{selectedCount}件をCSV（Jira取り込み用）で出力します
+          </p>
+          <div className="grid grid-cols-3 gap-2 sm:flex">
+            <button
+              type="button"
+              onClick={() => setChoosingExport(false)}
+              disabled={exporting}
+              className="min-h-10 rounded-lg border border-gray-600 px-3 text-sm font-semibold text-gray-300 disabled:opacity-50"
+            >
+              キャンセル
+            </button>
+            <button
+              type="button"
+              onClick={handleExportDownload}
+              disabled={exporting}
+              className="min-h-10 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              ダウンロード
+            </button>
+            <button
+              type="button"
+              onClick={handleExportEmail}
+              disabled={exporting}
+              className="min-h-10 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {exporting ? "送信中..." : "メールで送る"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (confirmingDelete) {
@@ -113,25 +168,33 @@ export function BulkActionBar({
   return (
     <div className="fixed inset-x-0 bottom-14 z-40 border-t border-blue-800 bg-blue-950">
       <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
-        <p className="text-sm font-semibold text-blue-200">{selectedCount}件選択中</p>
+        <p className="shrink-0 whitespace-nowrap text-sm font-semibold text-blue-200">{selectedCount}件選択中</p>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1">
-          <select
-            value={assigneeId}
-            onChange={(e) => onAssigneeChange(e.target.value)}
-            disabled={!allowAssigneeChange}
-            title={allowAssigneeChange ? undefined : "家族を1つに絞り込むと担当者を一括変更できます"}
-            className="appearance-none rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100 disabled:bg-gray-700 disabled:text-gray-500"
-            aria-label="担当者をまとめて変更"
+          <button
+            type="button"
+            onClick={() => setChoosingExport(true)}
+            disabled={submitting || deleting}
+            className="min-h-10 whitespace-nowrap rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-300 disabled:opacity-50"
           >
-            <option value="">{allowAssigneeChange ? "担当者: 変更しない" : "担当者: 家族を絞り込むと変更可能"}</option>
-            {allowAssigneeChange && <option value={BULK_UNASSIGN_VALUE}>担当者なしにする</option>}
-            {allowAssigneeChange &&
-              members.map((member) => (
+            CSV出力
+          </button>
+          {/* 複数の家族を横断表示している間は担当者を一括変更できないため、選択欄自体を出さない */}
+          {allowAssigneeChange && (
+            <select
+              value={assigneeId}
+              onChange={(e) => onAssigneeChange(e.target.value)}
+              className="appearance-none rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
+              aria-label="担当者をまとめて変更"
+            >
+              <option value="">担当者: 変更しない</option>
+              <option value={BULK_UNASSIGN_VALUE}>担当者なしにする</option>
+              {members.map((member) => (
                 <option key={member.profile_id} value={member.profile_id}>
                   {member.profile.display_name}
                 </option>
               ))}
-          </select>
+            </select>
+          )}
           <select
             value={status}
             onChange={(e) => onStatusChange(e.target.value)}
