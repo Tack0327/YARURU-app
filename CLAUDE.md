@@ -36,6 +36,8 @@ YARURU/
 │   │   ├── layout.tsx / page.tsx / globals.css
 │   │   ├── login/page.tsx
 │   │   ├── signup/page.tsx
+│   │   ├── forgot-password/page.tsx  # パスワード再設定メールの送信
+│   │   ├── reset-password/page.tsx   # メールのリンクから新しいパスワードを設定
 │   │   ├── groups/new/page.tsx    # 家族グループ作成
 │   │   ├── groups/join/page.tsx   # 招待コードで参加
 │   │   ├── home/page.tsx          # カレンダー統合済みホーム（期限超過・今日の作業・今後の予定）
@@ -120,7 +122,7 @@ YARURU/
 
 ## バージョン管理ルール
 
-- バージョン番号は `package.json` の `version`（`x.y.z`、現在は`0.1.0`）で管理する。
+- バージョン番号は `package.json` の `version`（`x.y.z`）で管理する。
 - 各桁の意味（3桁とも0から始まる想定。標準的なSemVerとは意味が異なるので注意）：
   - 1桁目（左）：UX（操作性・画面構成・画面遷移など）が変わったとき
   - 2桁目（中央）：機能が追加されたとき

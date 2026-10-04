@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PasswordInput } from "@/components/PasswordInput";
+import { FORGOT_PASSWORD_HINT_THRESHOLD } from "@/lib/password";
 import { createClient } from "@/lib/supabase/client";
 import { getStoredTheme, setStoredTheme, type Theme } from "@/lib/theme";
 
@@ -14,7 +15,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
   const [theme, setTheme] = useState<Theme>("dark");
+  // 入力済みのメールアドレスを再設定画面に引き継ぎ、もう一度入力する手間を省く
+  const forgotPasswordHref = email ? `/forgot-password?email=${encodeURIComponent(email)}` : "/forgot-password";
+  const showForgotPasswordHint = failedAttempts >= FORGOT_PASSWORD_HINT_THRESHOLD;
 
   useEffect(() => {
     setTheme(getStoredTheme());
@@ -35,6 +40,7 @@ export default function LoginPage() {
 
     if (signInError) {
       setSubmitting(false);
+      setFailedAttempts((count) => count + 1);
       setError("メールアドレスまたはパスワードが正しくありません。");
       return;
     }
@@ -81,11 +87,24 @@ export default function LoginPage() {
               パスワード
             </label>
             <PasswordInput id="password" autoComplete="current-password" value={password} onChange={setPassword} />
+            <div className="mt-2 text-right">
+              <Link href={forgotPasswordHref} className="text-sm text-blue-400">
+                パスワードを忘れた場合
+              </Link>
+            </div>
           </div>
           {error && (
             <p role="alert" className="text-sm text-red-400">
               {error}
             </p>
+          )}
+          {showForgotPasswordHint && (
+            <div className="rounded-lg border border-amber-600 bg-amber-950 px-4 py-3 text-sm text-amber-200">
+              <p>{failedAttempts}回連続でログインに失敗しました。</p>
+              <Link href={forgotPasswordHref} className="mt-1 inline-block font-semibold text-amber-100 underline">
+                パスワードを忘れた場合はこちら
+              </Link>
+            </div>
           )}
           <button
             type="submit"
