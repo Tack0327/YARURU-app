@@ -26,7 +26,7 @@ function NewGroupForm() {
       selectGroup(newGroup.id);
       router.replace("/home");
     } catch {
-      setError("家族グループの作成に失敗しました。時間をおいて再度お試しください。");
+      setError("グループの作成に失敗しました。時間をおいて再度お試しください。");
     } finally {
       setSubmitting(false);
     }
@@ -35,9 +35,9 @@ function NewGroupForm() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-2 text-center text-2xl font-bold text-gray-100">家族グループを作成</h1>
+        <h1 className="mb-2 text-center text-2xl font-bold text-gray-100">グループを作成</h1>
         <p className="mb-8 text-center text-sm text-gray-300">
-          グループを作成すると、招待コードを家族に共有して参加してもらえます。
+          グループを作成すると、招待コードをメンバーに共有して参加してもらえます。
         </p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <div>
@@ -48,7 +48,7 @@ function NewGroupForm() {
               id="groupName"
               type="text"
               required
-              placeholder="例：田中家"
+              placeholder="例：田中家、テニスサークル"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-3 text-base text-gray-100 focus:border-blue-500"

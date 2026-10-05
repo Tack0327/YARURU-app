@@ -210,7 +210,7 @@ function AdminContent() {
       {error && <p className="whitespace-pre-line text-sm text-red-400">{error}</p>}
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-gray-400">全ての家族グループ（{filteredGroups.length}件）</h2>
+        <h2 className="mb-2 text-sm font-bold text-gray-400">全てのグループ（{filteredGroups.length}件）</h2>
         {!groups ? (
           <p className="text-sm text-gray-500">読み込み中...</p>
         ) : (
@@ -340,7 +340,7 @@ function AdminContent() {
                     </p>
                     {deleteFlow.soloGroups.length > 0 && (
                       <p className="text-sm font-semibold text-red-300">
-                        このアカウントが唯一のメンバーである次の家族グループも、同時に削除されます：
+                        このアカウントが唯一のメンバーである次のグループも、同時に削除されます：
                         {deleteFlow.soloGroups.map((g) => g.name).join("、")}
                       </p>
                     )}

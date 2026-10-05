@@ -81,7 +81,7 @@ export function DateNotes({
         <>
           <NoteRow
             href={noteHref(dateKey, "shared")}
-            label={sharedNote ? `家族に共有（${memberNameOf(sharedNote.profile_id)}が編集）` : "家族に共有"}
+            label={sharedNote ? `グループに共有（${memberNameOf(sharedNote.profile_id)}が編集）` : "グループに共有"}
             title={sharedNote?.title}
             content={sharedNote?.content}
           />

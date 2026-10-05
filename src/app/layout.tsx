@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "YARURU",
-  description: "家族の予定・実施作業をみんなで共有するアプリ",
+  description: "グループの予定・実施作業をみんなで共有するアプリ",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

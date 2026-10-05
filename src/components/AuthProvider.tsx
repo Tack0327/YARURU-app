@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // 一時的な通信エラー等で取得に失敗しても、既存のgroups/isSuperAdminは保持する
         // （空にすると「所属グループがない」と誤解され、/groups/newへ誘導されてしまうため）
-        setGroupsError("家族グループの取得に失敗しました。通信状況をご確認のうえ、再読み込みしてください。");
+        setGroupsError("グループの取得に失敗しました。通信状況をご確認のうえ、再読み込みしてください。");
       }
     },
     [supabase]

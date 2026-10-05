@@ -12,18 +12,31 @@ import {
   deleteFamilyGroup,
   fetchGroupMembers,
   fetchSoleMemberGroupIds,
+  GROUP_NAME_MAX_LENGTH,
   leaveFamilyGroup,
   regenerateInviteCode,
   removeFamilyMember,
+  renameFamilyGroup,
   transferGroupOwnership,
+  validateGroupName,
   type MemberWithProfile,
 } from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
 
 function SettingsContent() {
   const router = useRouter();
-  const { user, group, groups, selectGroup, defaultGroupId, setDefaultGroup, refreshGroup, signOut, isAdminViewing } =
-    useAuth();
+  const {
+    user,
+    group,
+    groups,
+    selectGroup,
+    defaultGroupId,
+    setDefaultGroup,
+    refreshGroup,
+    signOut,
+    isAdminViewing,
+    viewGroupAsAdmin,
+  } = useAuth();
   const { showToast } = useToast();
   const [supabase] = useState(() => createClient());
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
@@ -43,6 +56,9 @@ function SettingsContent() {
   const [soleMemberGroupNames, setSoleMemberGroupNames] = useState<string[]>([]);
 
   const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
+  // nullは「グループ名を表示中」、文字列は「編集中（入力中の名前）」
+  const [editingGroupName, setEditingGroupName] = useState<string | null>(null);
+  const [savingGroupName, setSavingGroupName] = useState(false);
 
   const isOwner = group?.role === "owner";
   // 管理者ビュー中は役割をowner扱いにしているが、招待コードの再発行とメンバーの削除は
@@ -80,6 +96,36 @@ function SettingsContent() {
   useEffect(() => {
     loadMembers();
   }, [loadMembers]);
+
+  async function handleRenameGroup() {
+    if (!group || editingGroupName === null) return;
+    const validationError = validateGroupName(editingGroupName);
+    if (validationError) {
+      showToast(validationError, "error");
+      return;
+    }
+    setSavingGroupName(true);
+    try {
+      const renamed = await renameFamilyGroup(supabase, group.group.id, editingGroupName);
+      // 管理者ビュー中は閲覧中のグループの情報を手元に持っているため、それを差し替えて表示に反映する
+      if (isAdminViewing) viewGroupAsAdmin(renamed);
+      else await refreshGroup();
+      setEditingGroupName(null);
+      showToast("グループ名を変更しました");
+    } catch (err) {
+      // DB関数が返した利用者向けのメッセージ（P0001。「権限がありません」など）だけを表示し、
+      // 関数が見つからないなどの技術的な英語のメッセージは画面に出さない
+      const dbError = err as { code?: string; message?: string };
+      showToast(
+        dbError?.code === "P0001" && dbError.message
+          ? dbError.message
+          : "グループ名を変更できませんでした。時間をおいて再度お試しください。",
+        "error"
+      );
+    } finally {
+      setSavingGroupName(false);
+    }
+  }
 
   async function handleSendPasswordReset() {
     if (!user?.email) return;
@@ -162,7 +208,7 @@ function SettingsContent() {
     setSavingDefaultGroup(true);
     try {
       await setDefaultGroup(groupId || null);
-      showToast("ログイン後に表示する家族を設定しました");
+      showToast("ログイン後に表示するグループを設定しました");
     } catch {
       showToast("設定に失敗しました。もう一度お試しください。", "error");
     } finally {
@@ -258,21 +304,71 @@ function SettingsContent() {
 
       {groups.length > 0 && (
         <section>
-          <h2 className="mb-2 text-sm font-bold text-gray-400">ログイン後に表示する家族</h2>
+          <h2 className="mb-2 text-sm font-bold text-gray-400">ログイン後に表示するグループ</h2>
           <select
             value={defaultGroupId ?? ""}
             onChange={(e) => handleChangeDefaultGroup(e.target.value)}
             disabled={savingDefaultGroup}
             className="w-full appearance-none rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500 disabled:opacity-50"
           >
-            <option value="">指定しない（最後に見ていた家族を表示）</option>
+            <option value="">指定しない（最後に見ていたグループを表示）</option>
             {groups.map((g) => (
               <option key={g.group.id} value={g.group.id}>
                 {g.group.name}
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-gray-500">次回ログイン時に、まずこの家族の画面が表示されます。</p>
+          <p className="mt-1 text-xs text-gray-500">次回ログイン時に、まずこのグループの画面が表示されます。</p>
+        </section>
+      )}
+
+      {group && (
+        <section>
+          <h2 className="mb-2 text-sm font-bold text-gray-400">グループ名</h2>
+          {editingGroupName !== null ? (
+            <div className="flex flex-col gap-2">
+              <input
+                type="text"
+                value={editingGroupName}
+                onChange={(e) => setEditingGroupName(e.target.value)}
+                maxLength={GROUP_NAME_MAX_LENGTH}
+                aria-label="新しいグループ名"
+                className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingGroupName(null)}
+                  disabled={savingGroupName}
+                  className="min-h-10 flex-1 rounded-lg border border-gray-600 text-sm font-semibold text-gray-300 disabled:opacity-50"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRenameGroup}
+                  disabled={savingGroupName}
+                  className="min-h-10 flex-1 rounded-lg bg-blue-600 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {savingGroupName ? "保存中..." : "保存する"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-gray-700 px-4 py-3">
+              <span className="truncate text-sm font-semibold text-gray-100">{group.group.name}</span>
+              {/* グループ名の変更は、そのグループの管理者（またはスーパー管理者）だけがDB側で許可されている */}
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => setEditingGroupName(group.group.name)}
+                  className="min-h-8 shrink-0 rounded-lg border border-gray-600 px-3 text-xs font-semibold text-gray-300"
+                >
+                  名前を変更
+                </button>
+              )}
+            </div>
+          )}
         </section>
       )}
 
@@ -298,7 +394,7 @@ function SettingsContent() {
             </button>
           )}
         </div>
-        <p className="mt-1 text-xs text-gray-500">この招待コードを家族に共有すると参加できます。</p>
+        <p className="mt-1 text-xs text-gray-500">この招待コードをメンバーに共有すると参加できます。</p>
       </section>
 
       {isOwner && (
@@ -481,11 +577,11 @@ function SettingsContent() {
           {confirmingDeleteAccount ? (
             <div className="flex flex-col gap-3">
               <p className="text-sm font-semibold text-red-300">
-                アカウントを削除しますか？所属している全ての家族グループから抜け、この操作は取り消せません。
+                アカウントを削除しますか？所属している全てのグループから抜け、この操作は取り消せません。
               </p>
               {soleMemberGroupNames.length > 0 && (
                 <p className="text-sm font-semibold text-red-300">
-                  あなたが唯一のメンバーである次の家族グループも、アカウントと同時に削除されます：
+                  あなたが唯一のメンバーである次のグループも、アカウントと同時に削除されます：
                   {soleMemberGroupNames.join("、")}
                 </p>
               )}

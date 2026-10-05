@@ -132,6 +132,7 @@ export type Database = {
       /** 招待コードが見つからない場合はnull（または全項目がnullの行）を返す（0027） */
       join_family_group: { Args: { p_invite_code: string }; Returns: FamilyGroup | null };
       bulk_delete_items: { Args: { p_item_ids: string[] }; Returns: undefined };
+      rename_family_group: { Args: { p_group_id: string; p_name: string }; Returns: FamilyGroup };
       regenerate_invite_code: { Args: { p_group_id: string }; Returns: FamilyGroup };
       remove_family_member: { Args: { p_group_id: string; p_profile_id: string }; Returns: undefined };
       leave_family_group: { Args: { p_group_id: string }; Returns: undefined };

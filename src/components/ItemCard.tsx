@@ -86,7 +86,7 @@ export function ItemCard({
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-400">
         {schedule && <span>{schedule}</span>}
         {assigneeName && <span>担当: {assigneeName}</span>}
-        {groupName && <span>家族: {groupName}</span>}
+        {groupName && <span>グループ: {groupName}</span>}
       </div>
     </>
   );

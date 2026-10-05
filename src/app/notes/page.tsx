@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Note, NoteVisibility } from "@/types/database";
 
 const VISIBILITY_LABEL: Record<NoteVisibility, string> = {
-  shared: "家族に共有",
+  shared: "グループに共有",
   private: "自分だけ",
 };
 
@@ -113,7 +113,7 @@ function NoteEditContent() {
         {dateKey}のメモ・日記（{VISIBILITY_LABEL[visibility]}）
       </h1>
       {visibility === "shared" && (
-        <p className="text-xs text-gray-500">家族の誰でも閲覧・編集できます。</p>
+        <p className="text-xs text-gray-500">グループのメンバーなら誰でも閲覧・編集できます。</p>
       )}
 
       <div>

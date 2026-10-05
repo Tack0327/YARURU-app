@@ -30,9 +30,9 @@ export function FilterBar({
           value={filters.groupId ?? ""}
           onChange={(e) => onChange({ ...filters, groupId: e.target.value || undefined })}
           className="w-full appearance-none rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
-          aria-label="家族で絞り込み"
+          aria-label="グループで絞り込み"
         >
-          <option value="">家族: すべて</option>
+          <option value="">グループ: すべて</option>
           {groups.map((g) => (
             <option key={g.id} value={g.id}>
               {g.name}

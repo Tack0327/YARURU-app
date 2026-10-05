@@ -227,7 +227,7 @@ function HomeContent() {
           <select
             value={group.group.id}
             onChange={(e) => handleSelectGroup(e.target.value)}
-            aria-label="家族グループを切り替える"
+            aria-label="グループを切り替える"
             className="max-w-[60%] appearance-none truncate rounded-lg border border-gray-600 bg-gray-800 px-2 py-1.5 text-xl font-bold text-gray-100"
           >
             {selectableGroups.map((g) => (

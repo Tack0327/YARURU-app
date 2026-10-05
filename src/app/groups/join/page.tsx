@@ -36,8 +36,8 @@ function JoinGroupForm() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-2 text-center text-2xl font-bold text-gray-100">家族グループに参加</h1>
-        <p className="mb-8 text-center text-sm text-gray-300">家族から共有された招待コードを入力してください。</p>
+        <h1 className="mb-2 text-center text-2xl font-bold text-gray-100">グループに参加</h1>
+        <p className="mb-8 text-center text-sm text-gray-300">グループのメンバーから共有された招待コードを入力してください。</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <div>
             <label htmlFor="inviteCode" className="mb-1 block text-sm font-medium text-gray-300">

@@ -153,6 +153,23 @@ export async function transferGroupOwnership(supabase: Client, groupId: string, 
 }
 
 /** 家族グループを削除する（グループのowner、またはスーパー管理者のみ実行可能）。関連するチケット・メンバーも連鎖削除される */
+export const GROUP_NAME_MAX_LENGTH = 50;
+
+/** グループ名を検証する（純関数・テスト対象）。問題があれば利用者向けのメッセージを返す（問題なければnull）。DB関数と同じ条件 */
+export function validateGroupName(name: string): string | null {
+  const trimmed = name.trim();
+  if (trimmed.length === 0) return "グループ名を入力してください。";
+  if (trimmed.length > GROUP_NAME_MAX_LENGTH) return `グループ名は${GROUP_NAME_MAX_LENGTH}文字以内で入力してください。`;
+  return null;
+}
+
+/** グループ名を変更する（そのグループの管理者、またはスーパー管理者のみ実行可能） */
+export async function renameFamilyGroup(supabase: Client, groupId: string, name: string): Promise<FamilyGroup> {
+  const { data, error } = await supabase.rpc("rename_family_group", { p_group_id: groupId, p_name: name.trim() });
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteFamilyGroup(supabase: Client, groupId: string): Promise<void> {
   const { error } = await supabase.rpc("delete_family_group", { p_group_id: groupId });
   if (error) throw error;

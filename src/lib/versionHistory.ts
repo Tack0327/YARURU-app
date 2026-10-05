@@ -12,6 +12,14 @@ export type VersionHistoryEntry = {
  */
 export const VERSION_HISTORY: VersionHistoryEntry[] = [
   {
+    version: "2.0.0",
+    date: "2026-10-05",
+    changes: [
+      "呼び方を「家族」から「グループ」に変更（既存のグループはそのまま使えます）",
+      "設定画面からグループ名を変更できるように",
+    ],
+  },
+  {
     version: "1.4.5",
     date: "2026-10-05",
     changes: [
