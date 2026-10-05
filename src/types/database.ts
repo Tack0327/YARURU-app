@@ -158,6 +158,7 @@ export type Database = {
         Returns: undefined;
       };
       claim_csv_email_slot: { Args: Record<string, never>; Returns: "ok" | "too_soon" | "daily_limit" };
+      release_csv_email_slot: { Args: Record<string, never>; Returns: undefined };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

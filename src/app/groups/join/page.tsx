@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { RequireAuth } from "@/components/RequireAuth";
-import { toErrorMessage } from "@/lib/errors";
 import { INVITE_CODE_NOT_FOUND_MESSAGE, joinFamilyGroup } from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
 
@@ -27,8 +26,8 @@ function JoinGroupForm() {
       selectGroup(joinedGroup.id);
       router.replace("/home");
     } catch (err) {
-      // 試行回数の制限に達した場合は、DB関数のメッセージ（しばらく待つよう案内）をそのまま表示する
-      setError(toErrorMessage(err, INVITE_CODE_NOT_FOUND_MESSAGE));
+      // joinFamilyGroupが、画面に出してよい日本語のメッセージに変換したうえで投げている
+      setError(err instanceof Error ? err.message : INVITE_CODE_NOT_FOUND_MESSAGE);
     } finally {
       setSubmitting(false);
     }

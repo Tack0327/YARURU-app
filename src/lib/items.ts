@@ -146,6 +146,19 @@ export function chunkArray<T>(values: T[], size: number): T[][] {
 // UUID（36文字）100件でURLが約4KBに収まる件数
 const IN_FILTER_CHUNK_SIZE = 100;
 
+/** 項目をidsで指定した順に並べる（idsに無い項目は除く。純関数・テスト対象） */
+export function sortByIdOrder<T extends { id: string }>(items: T[], ids: string[]): T[] {
+  const byId = new Map(items.map((item) => [item.id, item]));
+  return ids.flatMap((id) => {
+    const item = byId.get(id);
+    return item ? [item] : [];
+  });
+}
+
+/**
+ * 指定したIDの項目を、指定した順に返す（RLSにより、自分が所属するグループの項目だけが返る）。
+ * 画面の一覧と同じ順でIDを渡せば、ダウンロードとメール添付でCSVの行の順序が揃う。
+ */
 export async function fetchItemsByIds(supabase: Client, itemIds: string[]): Promise<Item[]> {
   if (itemIds.length === 0) return [];
   const results = await Promise.all(
@@ -156,12 +169,7 @@ export async function fetchItemsByIds(supabase: Client, itemIds: string[]): Prom
     if (error) throw error;
     items.push(...(data ?? []));
   }
-  // 分割して取得すると全体の並び順が崩れるため、期限が近い順（期限なしは最後）に並べ直す
-  return items.sort((a, b) => {
-    const aMs = a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY;
-    const bMs = b.due_at ? new Date(b.due_at).getTime() : Number.POSITIVE_INFINITY;
-    return aMs - bMs;
-  });
+  return sortByIdOrder(items, itemIds);
 }
 
 export async function fetchItem(supabase: Client, itemId: string): Promise<Item | null> {

@@ -35,7 +35,8 @@ YARURU/
 │       ├── 0025_bulk_update_and_csv_email_limit.sql # 一括変更のトランザクション化・CSVメール送信の回数制限
 │       ├── 0026_block_anon_rpc.sql          # 未ログインからのRPC実行を禁止（アカウント削除・管理者委譲の権限チェック修正）
 │       ├── 0027_invite_code_and_integrity_hardening.sql # 招待コード12桁化・参加の試行回数制限・管理者1人の保証など
-│       └── 0028_fix_account_delete_with_items.sql # 0027のトリガーでアカウント削除が失敗する不具合の修正
+│       ├── 0028_fix_account_delete_with_items.sql # 0027のトリガーでアカウント削除が失敗する不具合の修正
+│       └── 0029_release_csv_slot_and_transfer_conflict.sql # CSVメール送信失敗時の枠の取り消し・管理者の同時委譲時のメッセージ
 ├── src/
 │   ├── proxy.ts           # Supabaseセッションの検証・更新（旧middleware）
 │   ├── app/

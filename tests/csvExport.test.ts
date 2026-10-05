@@ -88,10 +88,20 @@ describe("csvFileName", () => {
 });
 
 describe("parseCsvEmailRequest", () => {
+  const ID_A = "11111111-1111-4111-8111-111111111111";
+  const ID_B = "22222222-2222-4222-8222-222222222222";
+
+  it("UUIDの形式でないIDは、入力の誤りとして拒否する", () => {
+    expect(parseCsvEmailRequest({ itemIds: [ID_A, "not-a-uuid"], purpose: "jira" })).toEqual({
+      ok: false,
+      error: "選択したチケットの情報が正しくありません。画面を再読み込みしてから再度お試しください。",
+    });
+  });
+
   it("正しいリクエストはIDの重複を除いて受け付ける", () => {
-    expect(parseCsvEmailRequest({ itemIds: ["a", "b", "a"], purpose: "excel" })).toEqual({
+    expect(parseCsvEmailRequest({ itemIds: [ID_A, ID_B, ID_A], purpose: "excel" })).toEqual({
       ok: true,
-      itemIds: ["a", "b"],
+      itemIds: [ID_A, ID_B],
       purpose: "excel",
     });
   });
@@ -103,16 +113,16 @@ describe("parseCsvEmailRequest", () => {
   });
 
   it("上限件数を超える場合は拒否する", () => {
-    const itemIds = Array.from({ length: CSV_EXPORT_MAX_ITEMS + 1 }, (_, i) => `id-${i}`);
+    const itemIds = Array.from({ length: CSV_EXPORT_MAX_ITEMS + 1 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`);
     expect(parseCsvEmailRequest({ itemIds, purpose: "jira" }).ok).toBe(false);
     expect(parseCsvEmailRequest({ itemIds: itemIds.slice(0, CSV_EXPORT_MAX_ITEMS), purpose: "jira" }).ok).toBe(true);
   });
 
   it("用途がjira/excel以外なら拒否する", () => {
-    expect(parseCsvEmailRequest({ itemIds: ["a"] })).toEqual({
+    expect(parseCsvEmailRequest({ itemIds: [ID_A] })).toEqual({
       ok: false,
       error: "CSVの用途（Jira取り込み用／Excel閲覧用）を選択してください。",
     });
-    expect(parseCsvEmailRequest({ itemIds: ["a"], purpose: "pdf" }).ok).toBe(false);
+    expect(parseCsvEmailRequest({ itemIds: [ID_A], purpose: "pdf" }).ok).toBe(false);
   });
 });

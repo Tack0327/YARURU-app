@@ -3,6 +3,7 @@ import {
   chunkArray,
   fetchAllPages,
   planBulkDateChange,
+  sortByIdOrder,
   sortItemsForHome,
   sortItemsForSelectedDate,
   summarizeBulkChange,
@@ -245,5 +246,28 @@ describe("chunkArray", () => {
 
   it("空の配列なら空のまとまりを返す", () => {
     expect(chunkArray([], 100)).toEqual([]);
+  });
+});
+
+describe("sortByIdOrder", () => {
+  it("指定したIDの順に並べ、指定に無い項目は除く", () => {
+    const items = [{ id: "c" }, { id: "a" }, { id: "b" }, { id: "x" }];
+    expect(sortByIdOrder(items, ["a", "b", "c"]).map((item) => item.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("取得できなかったID（権限が無い・削除済み）は飛ばす", () => {
+    expect(sortByIdOrder([{ id: "a" }], ["missing", "a"]).map((item) => item.id)).toEqual(["a"]);
+  });
+});
+
+describe("shouldNotifyForItem（終日）", () => {
+  // 終日の期限はAsia/Tokyoの00:00（UTCでは前日15:00）で保存されている。JST 6/16が期限の終日の作業
+  const allDayDueJune16 = "2026-06-15T15:00:00.000Z";
+
+  it("終日の項目は、期限日が終わる時刻（翌日0時）を基準に通知の要否を判定する", () => {
+    // JST 6/15 23:00：期限日が終わる（6/17 0時）まで25時間あるので、まだ通知しない
+    expect(shouldNotifyForItem({ status: "not_started", due_at: allDayDueJune16, is_all_day: true }, new Date("2026-06-15T14:00:00.000Z"))).toBe(false);
+    // JST 6/16 01:00：残り23時間なので通知する
+    expect(shouldNotifyForItem({ status: "not_started", due_at: allDayDueJune16, is_all_day: true }, new Date("2026-06-15T16:00:00.000Z"))).toBe(true);
   });
 });

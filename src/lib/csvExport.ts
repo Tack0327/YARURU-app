@@ -77,7 +77,12 @@ export function csvFileName(purpose: CsvPurpose, now: Date = new Date()): string
   return `yaruru-tickets-${purpose}-${stamp}.csv`;
 }
 
-/** メール送信APIのリクエスト本文を検証する（純関数・テスト対象）。問題があればerrorに利用者向けのメッセージを入れて返す */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * メール送信APIのリクエスト本文を検証する（純関数・テスト対象）。問題があればerrorに利用者向けのメッセージを入れて返す。
+ * itemIdsは画面の一覧の並び順で受け取り、重複を除いた上でその順序を保つ（CSVの行の順序に使う）。
+ */
 export function parseCsvEmailRequest(
   body: unknown
 ): { ok: true; itemIds: string[]; purpose: CsvPurpose } | { ok: false; error: string } {
@@ -89,6 +94,10 @@ export function parseCsvEmailRequest(
     !itemIds.every((id) => typeof id === "string" && id.length > 0)
   ) {
     return { ok: false, error: `チケットを1〜${CSV_EXPORT_MAX_ITEMS}件選択してください。` };
+  }
+  // UUIDでない値はDBで型変換エラーになり「時間をおいて再度お試しください」と誤解させてしまうため、ここで入力の誤りとして返す
+  if (!itemIds.every((id) => UUID_PATTERN.test(id))) {
+    return { ok: false, error: "選択したチケットの情報が正しくありません。画面を再読み込みしてから再度お試しください。" };
   }
   if (purpose !== "jira" && purpose !== "excel") {
     return { ok: false, error: "CSVの用途（Jira取り込み用／Excel閲覧用）を選択してください。" };

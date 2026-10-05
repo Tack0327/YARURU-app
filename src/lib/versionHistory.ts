@@ -11,6 +11,16 @@ export type VersionHistoryEntry = {
  * package.jsonのversionを上げたら、先頭に1件追加する（tests/versionHistory.test.tsで一致を確認している）。
  */
 export const VERSION_HISTORY: VersionHistoryEntry[] = [
+  {
+    version: "1.4.2",
+    date: "2026-10-05",
+    changes: [
+      "CSVのメール送信に失敗したとき、送信回数が減らないように",
+      "メールで届くCSVの並び順を、画面の一覧と同じに",
+      "招待コードでの参加や管理者の変更で、分かりにくいエラーメッセージが出る不具合を修正",
+      "期限切れの再設定リンクを開いたときの案内を修正",
+    ],
+  },
   { version: "1.4.1", date: "2026-10-05", changes: ["退会（アカウント削除）ができなくなっていた不具合を修正"] },
   {
     version: "1.4.0",

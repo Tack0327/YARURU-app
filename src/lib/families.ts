@@ -75,10 +75,21 @@ export async function createFamilyGroup(supabase: Client, name: string): Promise
 }
 
 export const INVITE_CODE_NOT_FOUND_MESSAGE = "招待コードが正しくありません。ご確認のうえ再度お試しください。";
+const JOIN_FAILED_MESSAGE = "参加できませんでした。通信状況をご確認のうえ再度お試しください。";
+
+/**
+ * 招待コードでの参加に失敗したときに表示するメッセージを決める（純関数・テスト対象）。
+ * DB関数がraise exceptionで返した利用者向けのメッセージ（試行回数の制限など。コードはP0001）だけをそのまま表示し、
+ * 通信エラーなど英語の技術的なメッセージは画面に出さない。
+ */
+export function joinFamilyGroupErrorMessage(error: { code?: string; message?: string } | null): string {
+  if (error?.code === "P0001" && error.message) return error.message;
+  return JOIN_FAILED_MESSAGE;
+}
 
 export async function joinFamilyGroup(supabase: Client, inviteCode: string): Promise<FamilyGroup> {
   const { data, error } = await supabase.rpc("join_family_group", { p_invite_code: inviteCode });
-  if (error) throw error;
+  if (error) throw new Error(joinFamilyGroupErrorMessage(error));
   // 失敗した試行を記録して回数制限をかけるため、DB関数は見つからない場合に例外ではなくNULLを返す
   if (!data?.id) throw new Error(INVITE_CODE_NOT_FOUND_MESSAGE);
   return data;

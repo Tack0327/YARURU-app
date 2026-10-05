@@ -171,7 +171,11 @@ function ItemsContent() {
       const response = await fetch("/api/export-csv/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemIds: [...selectedIds], purpose }),
+        // ダウンロードと同じく画面の一覧の並び順でCSVを作るため、選択した順ではなく一覧の順でIDを送る
+        body: JSON.stringify({
+          itemIds: (items ?? []).filter((item) => selectedIds.has(item.id)).map((item) => item.id),
+          purpose,
+        }),
       });
       const result = (await response.json().catch(() => ({}))) as { count?: number; error?: string };
       if (!response.ok) {

@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     return errorResponse("メール送信の設定がされていません。管理者にお問い合わせください。", 500);
   }
 
+  let slotClaimed = false;
   try {
     const items = await fetchItemsByIds(supabase, itemIds);
     if (items.length === 0) return errorResponse("出力できるチケットがありません。", 404);
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
     if (slot === "daily_limit") {
       return errorResponse(`メールで送れるのは1日${CSV_EMAIL_DAILY_LIMIT}回までです。ダウンロードをご利用ください。`, 429);
     }
+    slotClaimed = true;
 
     const members = await fetchGroupMembersForGroups(supabase, [...new Set(items.map((item) => item.group_id))]);
     const memberNameOf = (id: string | null) => members.find((m) => m.profile_id === id)?.profile.display_name;
@@ -73,6 +75,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ count: items.length });
   } catch (err) {
+    // 送信枠を確保した後に失敗した場合は、送っていないのに回数だけ減らないよう枠を戻す
+    // （戻す処理自体が失敗しても、利用者に返すのは送信失敗のメッセージでよいため結果は無視する）
+    if (slotClaimed) await supabase.rpc("release_csv_email_slot");
     if (err instanceof MailerNotConfiguredError) {
       return errorResponse("メール送信の設定がされていません。管理者にお問い合わせください。", 500);
     }

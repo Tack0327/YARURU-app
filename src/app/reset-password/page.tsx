@@ -68,6 +68,9 @@ export default function ResetPasswordPage() {
         return;
       }
 
+      // 再設定リンクから開いたか（?code=...付き）を、交換処理でURLが書き換わる前に控えておく
+      const openedFromLink = readUrlParam("code") !== null;
+
       // 標準のリンク（?code=...）はSupabaseクライアントが初期化時に自動でセッションへ交換するので、その完了を待つ
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
@@ -78,7 +81,13 @@ export default function ResetPasswordPage() {
       for (let i = 0; i < 10 && recoveryVerifiedAtRef.current === null; i += 1) {
         await new Promise((resolve) => setTimeout(resolve, 30));
       }
-      setLinkStatus(isRecoveryWindowOpen(recoveryVerifiedAtRef.current) ? "ready" : "notRecovery");
+      if (isRecoveryWindowOpen(recoveryVerifiedAtRef.current)) {
+        setLinkStatus("ready");
+        return;
+      }
+      // リンクから開いたのに確認できなかった＝期限切れ・使用済みのリンク。ログイン中だとセッション自体は残るため、
+      // 「リンクから開いてください」ではなく「リンクが無効です」と案内する
+      setLinkStatus(openedFromLink ? "invalid" : "notRecovery");
     }
 
     verifyLink();
