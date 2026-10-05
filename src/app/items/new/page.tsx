@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { createItem, createRecurringItems } from "@/lib/items";
+import { goBackOr } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 function NewItemContent() {
@@ -60,7 +61,7 @@ function NewItemContent() {
           await createItem(supabase, baseInput);
         }
         showToast("登録しました");
-        router.replace("/items");
+        goBackOr(router, "/items");
       } catch {
         showToast("登録に失敗しました。もう一度お試しください。", "error");
       } finally {
@@ -82,7 +83,7 @@ function NewItemContent() {
         submitting={submitting}
         submitLabel="登録する"
         onSubmit={handleSubmit}
-        onCancel={() => router.back()}
+        onCancel={() => goBackOr(router, "/items")}
       />
     </div>
   );

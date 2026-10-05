@@ -71,6 +71,7 @@ YARURU/
 │   │   ├── notifications.ts # 通知要否の判定（送信処理は将来LINE連携用に未実装）
 │   │   ├── csvExport.ts   # チケットのJira取り込み用CSV生成（BOM付きUTF-8）
 │   │   ├── mailer.ts      # Gmail（SMTP_USER/SMTP_PASSWORD）経由のメール送信（サーバー専用）
+│   │   ├── navigation.ts  # 登録・更新・削除後に「開く前の画面」へ戻る処理（直接開いた場合の移動先付き）
 │   │   └── versionHistory.ts # Version history画面に表示するバージョン履歴（新しい順）
 │   └── types/database.ts  # Supabaseテーブル・RPCの型定義
 ├── tests/

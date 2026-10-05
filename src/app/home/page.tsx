@@ -26,6 +26,9 @@ function isPastDue(item: Item, now: Date): boolean {
   return item.due_at !== null && dueDeadlineMs(item.due_at, item.is_all_day) <= now.getTime();
 }
 
+// 「完了を非表示にする」の状態を、他の画面へ移動して戻ってきても保つためにブラウザに保存する
+const HIDE_COMPLETED_STORAGE_KEY = "yaruru:homeHideCompleted";
+
 const UPCOMING_RANGE_OPTIONS: { value: UpcomingRange; label: string }[] = [
   { value: "week", label: "1週間以内" },
   { value: "month", label: "1か月以内" },
@@ -66,7 +69,14 @@ function HomeContent() {
   // dateクエリパラメータで特定の日付に戻ってきた場合は、最初から日表示にしておく。
   const [calendarMode, setCalendarMode] = useState<"months" | "days">(initialDateParam ? "days" : "months");
   const [upcomingRange, setUpcomingRange] = useState<UpcomingRange>("month");
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(
+    () => typeof window !== "undefined" && window.localStorage.getItem(HIDE_COMPLETED_STORAGE_KEY) === "true"
+  );
+
+  function handleToggleHideCompleted(checked: boolean) {
+    setHideCompleted(checked);
+    window.localStorage.setItem(HIDE_COMPLETED_STORAGE_KEY, String(checked));
+  }
   const [noteDates, setNoteDates] = useState<Set<string>>(new Set());
   const [holidays, setHolidays] = useState<Map<string, string>>(new Map());
 
@@ -306,7 +316,7 @@ function HomeContent() {
         <input
           type="checkbox"
           checked={hideCompleted}
-          onChange={(e) => setHideCompleted(e.target.checked)}
+          onChange={(e) => handleToggleHideCompleted(e.target.checked)}
           className="h-4 w-4 rounded border-gray-600"
         />
         完了を非表示にする

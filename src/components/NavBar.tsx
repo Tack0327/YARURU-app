@@ -22,7 +22,9 @@ export function NavBar() {
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-700 bg-gray-800">
       <ul className="mx-auto flex max-w-2xl">
         {items.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          // チケットの詳細・新規登録（/items/...）はホームからも開くため、チケット一覧を経由したように見えないよう一覧のときだけ光らせる
+          const isActive =
+            item.href === "/items" ? pathname === "/items" : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <li key={item.href} className="flex-1">
               <Link

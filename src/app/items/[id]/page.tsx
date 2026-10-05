@@ -7,6 +7,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { deleteItem, fetchItem, updateItem } from "@/lib/items";
+import { goBackOr } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Item } from "@/types/database";
 
@@ -52,7 +53,7 @@ function ItemDetailContent() {
         });
         setItem(updated);
         showToast("更新しました");
-        router.push("/items");
+        goBackOr(router, "/items");
       } catch {
         showToast("更新に失敗しました。もう一度お試しください。", "error");
       } finally {
@@ -68,7 +69,7 @@ function ItemDetailContent() {
     try {
       await deleteItem(supabase, params.id);
       showToast("削除しました");
-      router.push("/items");
+      goBackOr(router, "/items");
     } catch {
       showToast("削除に失敗しました。もう一度お試しください。", "error");
     } finally {
@@ -97,7 +98,7 @@ function ItemDetailContent() {
         submitting={submitting}
         submitLabel="更新する"
         onSubmit={handleSubmit}
-        onCancel={() => router.back()}
+        onCancel={() => goBackOr(router, "/items")}
       />
       <button
         onClick={handleDelete}

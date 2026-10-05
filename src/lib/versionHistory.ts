@@ -12,6 +12,16 @@ export type VersionHistoryEntry = {
  */
 export const VERSION_HISTORY: VersionHistoryEntry[] = [
   {
+    version: "1.4.3",
+    date: "2026-10-05",
+    changes: [
+      "薄暗い背景のとき、ヘッダーのバージョン表示を見やすく",
+      "ホームの「完了を非表示にする」を、他の画面から戻っても保持するように",
+      "チケットの登録・更新・削除の後、開く前の画面に戻るように",
+      "チケットの詳細画面で「チケット一覧」のタブが選択中に見える不具合を修正",
+    ],
+  },
+  {
     version: "1.4.2",
     date: "2026-10-05",
     changes: [

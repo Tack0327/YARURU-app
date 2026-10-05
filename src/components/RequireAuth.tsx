@@ -68,7 +68,8 @@ function TopBar() {
         <Link
           href="/versions"
           aria-label="Version historyを開く"
-          className="rounded-md px-1 text-xs text-gray-500 underline decoration-dotted underline-offset-2"
+          // gray-500は明るい背景用の色の反転対象外で、薄暗い背景だと見えにくいため、反転されるgray-300を使う
+          className="rounded-md px-1 text-xs font-semibold text-gray-300 underline decoration-gray-300 underline-offset-4"
         >
           v{process.env.NEXT_PUBLIC_APP_VERSION}
         </Link>
