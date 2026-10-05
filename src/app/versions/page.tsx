@@ -28,7 +28,8 @@ function VersionsContent() {
 
 export default function VersionsPage() {
   return (
-    <RequireAuth requireGroup showNav>
+    // Version historyは家族グループに関係しない情報のため、グループ未参加でも見られるようにする
+    <RequireAuth showNav>
       <VersionsContent />
     </RequireAuth>
   );

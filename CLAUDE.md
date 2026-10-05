@@ -21,6 +21,7 @@
 
 ```
 YARURU/
+├── .github/workflows/ci.yml  # プッシュ時のLint・型チェック・テスト・ビルド・脆弱性チェック
 ├── .env.example
 ├── .env.local            # Supabaseの接続情報（Git管理対象外）
 ├── next.config.ts
@@ -32,7 +33,8 @@ YARURU/
 │       ├── 0003_recurrence_and_allday.sql   # end_at・終日・繰り返し用の列追加
 │       ├── ...（0004〜0024：グループ管理・メモ・アカウント削除など）
 │       ├── 0025_bulk_update_and_csv_email_limit.sql # 一括変更のトランザクション化・CSVメール送信の回数制限
-│       └── 0026_block_anon_rpc.sql          # 未ログインからのRPC実行を禁止（アカウント削除・管理者委譲の権限チェック修正）
+│       ├── 0026_block_anon_rpc.sql          # 未ログインからのRPC実行を禁止（アカウント削除・管理者委譲の権限チェック修正）
+│       └── 0027_invite_code_and_integrity_hardening.sql # 招待コード12桁化・参加の試行回数制限・管理者1人の保証など
 ├── src/
 │   ├── proxy.ts           # Supabaseセッションの検証・更新（旧middleware）
 │   ├── app/
@@ -84,6 +86,7 @@ YARURU/
   - SECURITY DEFINER関数は、先頭で `if auth.uid() is null then raise exception ...` として未ログインを拒否する。
   - `auth.uid()` との比較は `<>` / `=` ではなく `is distinct from` / `is not distinct from` を使う（NULLのとき `<>` の結果はNULL＝偽扱いになり、権限チェックをすり抜けるため）。
   - 関数を作ったら `revoke execute on function ... from public, anon;` と `grant execute on function ... to authenticated;` を必ず書く（Supabaseは既定でanonにも実行権限を付けるため）。
+  - `src/types/database.ts` は手書きの型定義のため、テーブル・DB関数を追加・変更したら同じ変更を型にも反映する（Supabase CLIを導入していないため型の自動生成は行っていない）。
 - 完了日時の自動設定・解除と `updated_at` の更新は、DBトリガー（`items_before_update`）で一元管理し、クライアント実装に依存させない。
 - 完了から14日経過した項目は削除せず、クエリ条件（`isHiddenAfterCompletion`）で通常一覧から除外し、完了履歴画面からのみ確認できるようにする。
 - 繰り返し予定（毎日・毎週・隔週・月に一度）は、作成時に既定の期間（3か月）分の**独立した項目を一括生成**する方式とする。生成後の各項目は`recurrence_group_id`で緩く紐づくだけで、それぞれ個別に編集・完了・削除できる（シリーズ一括編集・無期限の繰り返しには対応しない）。
@@ -209,6 +212,17 @@ YARURU/
      for i in 1 2 3; do NODE_OPTIONS="--use-system-ca" vercel --prod && break; echo "再試行 $i/3..."; sleep 3; done
      ```
      （`vercel --prod`は`"Not authorized"`という一時的なエラーで失敗することがあるが、CLIの認証状態自体には問題がなく、同じコマンドをそのまま再実行すれば成功する。そのため上記のように自動で数回リトライする。3回とも失敗した場合のみユーザーに報告する。）
+  5. **本番デプロイに成功したら、デプロイしたコミットに `v<package.jsonのversion>` の注釈付きタグを付けてGitHubにプッシュする**（どの版が本番に出たかを後から特定できるようにするため）。
+     ```
+     git tag -a v1.2.3 -m "YARURU v1.2.3 production deploy (YYYY-MM-DD)" && git push origin v1.2.3
+     ```
+     同じバージョンのタグが既にある場合（同じ版を再デプロイした場合など）は付け直さず、その旨を報告する。
+
+## CI（GitHub Actions）
+
+- `.github/workflows/ci.yml` で、`main`へのプッシュとプルリクエストのたびに Lint・型チェック・単体テスト・ビルド・本番依存の脆弱性チェック（`npm audit --omit=dev --audit-level=high`）を自動実行する。
+- ローカルでの「コミット・プッシュ前の試験結果表示」の代わりにはしない（両方行う）。プッシュ後のCIの結果は、GitHubリポジトリの「Actions」タブで確認する（このPCには`gh`コマンドが入っていないため、失敗した場合はユーザーに画面の内容を共有してもらって原因を調べる）。
+- CIのビルドではSupabaseにつながないダミーの環境変数を使う。本物のキーやパスワードをワークフローファイルに書かない。
 
 ## 回答言語
 

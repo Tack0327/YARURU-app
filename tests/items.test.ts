@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  chunkArray,
   fetchAllPages,
   planBulkDateChange,
   sortItemsForHome,
@@ -234,5 +235,15 @@ describe("fetchAllPages", () => {
   it("途中でエラーが返ったらそのエラーを投げる", async () => {
     const failure = new Error("network");
     await expect(fetchAllPages(() => Promise.resolve({ data: null, error: failure }), 3)).rejects.toBe(failure);
+  });
+});
+
+describe("chunkArray", () => {
+  it("指定した件数ずつに分け、端数は最後のまとまりに入れる", () => {
+    expect(chunkArray([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+  });
+
+  it("空の配列なら空のまとまりを返す", () => {
+    expect(chunkArray([], 100)).toEqual([]);
   });
 });

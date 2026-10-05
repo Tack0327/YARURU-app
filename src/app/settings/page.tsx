@@ -22,7 +22,8 @@ import { createClient } from "@/lib/supabase/client";
 
 function SettingsContent() {
   const router = useRouter();
-  const { user, group, groups, selectGroup, defaultGroupId, setDefaultGroup, refreshGroup, signOut } = useAuth();
+  const { user, group, groups, selectGroup, defaultGroupId, setDefaultGroup, refreshGroup, signOut, isAdminViewing } =
+    useAuth();
   const { showToast } = useToast();
   const [supabase] = useState(() => createClient());
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
@@ -41,7 +42,12 @@ function SettingsContent() {
   const [accountDeleteError, setAccountDeleteError] = useState<string | null>(null);
   const [soleMemberGroupNames, setSoleMemberGroupNames] = useState<string[]>([]);
 
+  const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
+
   const isOwner = group?.role === "owner";
+  // 管理者ビュー中は役割をowner扱いにしているが、招待コードの再発行とメンバーの削除は
+  // そのグループの本当の管理者しかDB側で許可されておらず必ず失敗するため、ボタン自体を出さない
+  const canManageMembers = isOwner && !isAdminViewing;
 
   // 退会できなかった理由を、ボタンの近くにしばらく表示する（トーストは消えるのが早く見逃しやすいため）
   useEffect(() => {
@@ -75,6 +81,25 @@ function SettingsContent() {
     loadMembers();
   }, [loadMembers]);
 
+  async function handleSendPasswordReset() {
+    if (!user?.email) return;
+    setSendingPasswordReset(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setSendingPasswordReset(false);
+    if (resetError) {
+      showToast(
+        resetError.code === "over_email_send_rate_limit" || resetError.status === 429
+          ? "短時間に送信が集中しています。しばらく時間をおいてから再度お試しください。"
+          : "メールの送信に失敗しました。時間をおいて再度お試しください。",
+        "error"
+      );
+      return;
+    }
+    showToast(`${user.email} に再設定メールを送信しました。メール内のリンクから新しいパスワードを設定してください`);
+  }
+
   async function handleCopyInviteCode() {
     if (!group) return;
     try {
@@ -106,7 +131,9 @@ function SettingsContent() {
     setRemovingId(profileId);
     try {
       await removeFamilyMember(supabase, group.group.id, profileId);
-      showToast("メンバーを削除しました");
+      // 削除した人が同じ招待コードで再参加できないよう、DB側で招待コードも作り直しているため最新を読み込む
+      await refreshGroup();
+      showToast("メンバーを削除しました（招待コードも新しくなりました）");
       loadMembers();
     } catch (err) {
       showToast(toErrorMessage(err, "削除に失敗しました。もう一度お試しください。"), "error");
@@ -261,7 +288,7 @@ function SettingsContent() {
           >
             コピー
           </button>
-          {isOwner && (
+          {canManageMembers && (
             <button
               onClick={handleRegenerateInviteCode}
               disabled={regenerating}
@@ -413,13 +440,15 @@ function SettingsContent() {
                         >
                           管理者にする
                         </button>
-                        <button
-                          onClick={() => handleRemoveMember(member.profile_id, member.profile.display_name)}
-                          disabled={removingId === member.profile_id}
-                          className="min-h-8 rounded-lg border border-red-300 px-3 text-xs font-semibold text-red-400 disabled:opacity-50"
-                        >
-                          {removingId === member.profile_id ? "削除中..." : "削除"}
-                        </button>
+                        {canManageMembers && (
+                          <button
+                            onClick={() => handleRemoveMember(member.profile_id, member.profile.display_name)}
+                            disabled={removingId === member.profile_id}
+                            className="min-h-8 rounded-lg border border-red-300 px-3 text-xs font-semibold text-red-400 disabled:opacity-50"
+                          >
+                            {removingId === member.profile_id ? "削除中..." : "削除"}
+                          </button>
+                        )}
                       </>
                     )}
                   </div>
@@ -432,6 +461,19 @@ function SettingsContent() {
 
       <section>
         <h2 className="mb-2 text-sm font-bold text-gray-400">アカウント</h2>
+        <div className="mb-3 rounded-lg border border-gray-700 p-4">
+          <p className="mb-3 text-sm text-gray-300">
+            安全のため、パスワードの変更は登録メールアドレス（{user?.email}）に届く再設定メールのリンクから行います。
+          </p>
+          <button
+            type="button"
+            onClick={handleSendPasswordReset}
+            disabled={sendingPasswordReset || !user?.email}
+            className="min-h-10 w-full rounded-lg border border-gray-600 text-sm font-semibold text-gray-300 disabled:opacity-50"
+          >
+            {sendingPasswordReset ? "送信中..." : "パスワードを変更する（再設定メールを送信）"}
+          </button>
+        </div>
         <div className="rounded-lg border border-red-300 p-4">
           {accountDeleteError && (
             <p className="mb-3 text-sm font-semibold text-red-300">{accountDeleteError}</p>

@@ -2,6 +2,11 @@ import nodemailer from "nodemailer";
 
 export class MailerNotConfiguredError extends Error {}
 
+/** メール送信に必要な接続情報（環境変数）が設定されているか */
+export function isMailerConfigured(): boolean {
+  return !!process.env.SMTP_USER && !!process.env.SMTP_PASSWORD;
+}
+
 /** Gmail（アプリパスワード）経由でメールを送る。サーバー側（Route Handler）専用 */
 export async function sendMailWithAttachment(params: {
   to: string;

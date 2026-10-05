@@ -74,9 +74,13 @@ export async function createFamilyGroup(supabase: Client, name: string): Promise
   return data;
 }
 
+export const INVITE_CODE_NOT_FOUND_MESSAGE = "招待コードが正しくありません。ご確認のうえ再度お試しください。";
+
 export async function joinFamilyGroup(supabase: Client, inviteCode: string): Promise<FamilyGroup> {
   const { data, error } = await supabase.rpc("join_family_group", { p_invite_code: inviteCode });
   if (error) throw error;
+  // 失敗した試行を記録して回数制限をかけるため、DB関数は見つからない場合に例外ではなくNULLを返す
+  if (!data?.id) throw new Error(INVITE_CODE_NOT_FOUND_MESSAGE);
   return data;
 }
 

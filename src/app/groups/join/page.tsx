@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { RequireAuth } from "@/components/RequireAuth";
-import { joinFamilyGroup } from "@/lib/families";
+import { toErrorMessage } from "@/lib/errors";
+import { INVITE_CODE_NOT_FOUND_MESSAGE, joinFamilyGroup } from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
 
 function JoinGroupForm() {
@@ -25,8 +26,9 @@ function JoinGroupForm() {
       await refreshGroup();
       selectGroup(joinedGroup.id);
       router.replace("/home");
-    } catch {
-      setError("招待コードが正しくありません。ご確認のうえ再度お試しください。");
+    } catch (err) {
+      // 試行回数の制限に達した場合は、DB関数のメッセージ（しばらく待つよう案内）をそのまま表示する
+      setError(toErrorMessage(err, INVITE_CODE_NOT_FOUND_MESSAGE));
     } finally {
       setSubmitting(false);
     }
@@ -46,7 +48,7 @@ function JoinGroupForm() {
               id="inviteCode"
               type="text"
               required
-              placeholder="例：A1B2C3D4"
+              placeholder="例：A1B2C3D4E5F6"
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
               className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-3 text-base uppercase text-gray-100 focus:border-blue-500"

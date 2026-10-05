@@ -133,15 +133,35 @@ export async function fetchCompletedHistory(supabase: Client, groupId: string): 
 }
 
 /** 指定したIDの項目を取得する（RLSにより、自分が所属するグループの項目だけが返る） */
+/**
+ * IDの一覧を指定した件数ずつに分ける（純関数・テスト対象）。
+ * `.in("id", ids)` はIDをURLに並べるため、数百件を一度に渡すとURLが長すぎてリクエストが失敗することがある。
+ */
+export function chunkArray<T>(values: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < values.length; i += size) chunks.push(values.slice(i, i + size));
+  return chunks;
+}
+
+// UUID（36文字）100件でURLが約4KBに収まる件数
+const IN_FILTER_CHUNK_SIZE = 100;
+
 export async function fetchItemsByIds(supabase: Client, itemIds: string[]): Promise<Item[]> {
   if (itemIds.length === 0) return [];
-  const { data, error } = await supabase
-    .from("items")
-    .select("*")
-    .in("id", itemIds)
-    .order("due_at", { ascending: true, nullsFirst: false });
-  if (error) throw error;
-  return data ?? [];
+  const results = await Promise.all(
+    chunkArray(itemIds, IN_FILTER_CHUNK_SIZE).map((ids) => supabase.from("items").select("*").in("id", ids))
+  );
+  const items: Item[] = [];
+  for (const { data, error } of results) {
+    if (error) throw error;
+    items.push(...(data ?? []));
+  }
+  // 分割して取得すると全体の並び順が崩れるため、期限が近い順（期限なしは最後）に並べ直す
+  return items.sort((a, b) => {
+    const aMs = a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY;
+    const bMs = b.due_at ? new Date(b.due_at).getTime() : Number.POSITIVE_INFINITY;
+    return aMs - bMs;
+  });
 }
 
 export async function fetchItem(supabase: Client, itemId: string): Promise<Item | null> {
@@ -253,7 +273,8 @@ export async function deleteItem(supabase: Client, itemId: string): Promise<void
 /** 一覧で選択した複数項目をまとめて削除する */
 export async function bulkDeleteItems(supabase: Client, itemIds: string[]): Promise<void> {
   if (itemIds.length === 0) return;
-  const { error } = await supabase.from("items").delete().in("id", itemIds);
+  // IDをURLではなくリクエスト本文で渡すDB関数を使う（件数が多くてもURLが長くならず、1回の処理で全件を削除できる）
+  const { error } = await supabase.rpc("bulk_delete_items", { p_item_ids: itemIds });
   if (error) throw error;
 }
 

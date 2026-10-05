@@ -1,0 +1,32 @@
+# プッシュのたびに、コミット前の試験（CLAUDE.md「コミット・プッシュ前の試験結果表示」）と同じ確認を自動で実行する。
+# 本番へのデプロイはVercel CLIでの手動デプロイのみのため、ここではデプロイは行わない。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # ビルド時に必要な値。実際のSupabaseには接続しないため、ダミーの値でよい（本物のキーはここに書かない）
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-dummy-anon-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+      # 本番に含まれる依存に重大度high以上の脆弱性があれば失敗させる（判定基準はCLAUDE.mdの「脆弱性チェックの判定基準」と同じ）
+      - run: npm audit --omit=dev --audit-level=high

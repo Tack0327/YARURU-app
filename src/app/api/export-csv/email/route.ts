@@ -10,7 +10,7 @@ import {
 } from "@/lib/csvExport";
 import { fetchGroupMembersForGroups } from "@/lib/families";
 import { fetchItemsByIds } from "@/lib/items";
-import { MailerNotConfiguredError, sendMailWithAttachment } from "@/lib/mailer";
+import { isMailerConfigured, MailerNotConfiguredError, sendMailWithAttachment } from "@/lib/mailer";
 import { createClient } from "@/lib/supabase/server";
 
 function errorResponse(message: string, status: number) {
@@ -36,6 +36,11 @@ export async function POST(request: NextRequest) {
   const parsed = parseCsvEmailRequest(await request.json().catch(() => null));
   if (!parsed.ok) return errorResponse(parsed.error, 400);
   const { itemIds, purpose } = parsed;
+
+  // 送信できない設定のまま送信回数だけを消費しないよう、回数制限の確認より前に調べる
+  if (!isMailerConfigured()) {
+    return errorResponse("メール送信の設定がされていません。管理者にお問い合わせください。", 500);
+  }
 
   try {
     const items = await fetchItemsByIds(supabase, itemIds);
