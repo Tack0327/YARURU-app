@@ -59,6 +59,7 @@ YARURU/
 │   │   ├── AuthProvider.tsx   # 認証状態・所属グループのContext
 │   │   ├── RequireAuth.tsx    # 未ログイン/未参加時のリダイレクト・共通ヘッダー(表示名・ログアウト)
 │   │   ├── NavBar.tsx
+│   │   ├── NavigationTracker.tsx # 画面の切り替わりを記録（navigation.tsの「戻る」判定に使う。layout.tsxに配置）
 │   │   ├── ToastProvider.tsx
 │   │   ├── ItemForm.tsx / ItemCard.tsx / StatusBadge.tsx / PasswordInput.tsx
 │   │   ├── FilterBar.tsx
@@ -71,7 +72,8 @@ YARURU/
 │   │   ├── notifications.ts # 通知要否の判定（送信処理は将来LINE連携用に未実装）
 │   │   ├── csvExport.ts   # チケットのJira取り込み用CSV生成（BOM付きUTF-8）
 │   │   ├── mailer.ts      # Gmail（SMTP_USER/SMTP_PASSWORD）経由のメール送信（サーバー専用）
-│   │   ├── navigation.ts  # 登録・更新・削除後に「開く前の画面」へ戻る処理（直接開いた場合の移動先付き）
+│   │   ├── navigation.ts  # 登録・更新・削除後に「開く前の画面」へ戻る処理（アプリ内の移動回数で判断。直接開いた場合の移動先付き）
+│   │   ├── userPreferences.ts # ブラウザに保存する利用者ごとの画面設定のキー一覧と、ログアウト時の一括消去
 │   │   └── versionHistory.ts # Version history画面に表示するバージョン履歴（新しい順）
 │   └── types/database.ts  # Supabaseテーブル・RPCの型定義
 ├── tests/
@@ -95,6 +97,7 @@ YARURU/
 - 完了から14日経過した項目は削除せず、クエリ条件（`isHiddenAfterCompletion`）で通常一覧から除外し、完了履歴画面からのみ確認できるようにする。
 - 繰り返し予定（毎日・毎週・隔週・月に一度）は、作成時に既定の期間（3か月）分の**独立した項目を一括生成**する方式とする。生成後の各項目は`recurrence_group_id`で緩く紐づくだけで、それぞれ個別に編集・完了・削除できる（シリーズ一括編集・無期限の繰り返しには対応しない）。
 - 予定(event)は単一日のイベントとして扱い、日付＋開始時間＋終了時間で管理する（複数日にまたがる予定は扱わない）。実施作業(todo)は開始日時〜期限日時の期間を持てる。どちらも`is_all_day`で終日（時間未指定）を表現できる。
+- 画面の設定（絞り込みなど）をブラウザ（localStorage）に保存するときは、キーを `src/lib/userPreferences.ts` に追加する（ログアウト時にまとめて消すため。家族で端末を共有すると、消し忘れた設定が次の人に見えてしまう）。
 - 動作確認は `npm run dev` で開発サーバーを起動して行う。社内ネットワークでは、サーバー側（Route Handler・proxy）からSupabaseやGmailへの通信が証明書エラー（`SELF_SIGNED_CERT_IN_CHAIN`）になるため、必ず `NODE_OPTIONS="--use-system-ca" npm run dev` で起動する（付けないとサーバー側の認証確認が失敗し、APIが「ログインしてください」を返す）。
 
 ## 受容済みのリスク（改善点を探すときは注意喚起として毎回伝える）

@@ -15,6 +15,7 @@ import { fetchHolidays } from "@/lib/holidays";
 import { fetchItems, sortItemsForHome, sortItemsForSelectedDate } from "@/lib/items";
 import { fetchNoteDatesInRange } from "@/lib/notes";
 import { createClient } from "@/lib/supabase/client";
+import { HIDE_COMPLETED_STORAGE_KEY } from "@/lib/userPreferences";
 import type { Item, ItemType } from "@/types/database";
 
 function itemCalendarDateKey(item: Item): string {
@@ -25,9 +26,6 @@ function itemCalendarDateKey(item: Item): string {
 function isPastDue(item: Item, now: Date): boolean {
   return item.due_at !== null && dueDeadlineMs(item.due_at, item.is_all_day) <= now.getTime();
 }
-
-// 「完了を非表示にする」の状態を、他の画面へ移動して戻ってきても保つためにブラウザに保存する
-const HIDE_COMPLETED_STORAGE_KEY = "yaruru:homeHideCompleted";
 
 const UPCOMING_RANGE_OPTIONS: { value: UpcomingRange; label: string }[] = [
   { value: "week", label: "1週間以内" },
@@ -69,6 +67,7 @@ function HomeContent() {
   // dateクエリパラメータで特定の日付に戻ってきた場合は、最初から日表示にしておく。
   const [calendarMode, setCalendarMode] = useState<"months" | "days">(initialDateParam ? "days" : "months");
   const [upcomingRange, setUpcomingRange] = useState<UpcomingRange>("month");
+  // 「完了を非表示にする」の状態は、他の画面へ移動して戻ってきても保つためにブラウザに保存する（ログアウト時に消える）
   const [hideCompleted, setHideCompleted] = useState(
     () => typeof window !== "undefined" && window.localStorage.getItem(HIDE_COMPLETED_STORAGE_KEY) === "true"
   );

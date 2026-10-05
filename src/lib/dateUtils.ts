@@ -99,7 +99,9 @@ function parseDateKeyUtc(dateKey: string): Date {
 /** 日付キー「YYYY-MM-DD」にmonthsか月を加算する（フォームの「繰り返しの期限」欄の初期値の計算に使う） */
 export function addMonthsToDateKey(dateKey: string, months: number): string {
   const [year, month, day] = dateKey.split("-").map(Number);
-  return dateKeyFromUtcDate(new Date(Date.UTC(year, month - 1 + months, day)));
+  // 加算先の月にその日が無い場合（例: 11/30の3か月後に2/30は無い）は、翌月へはみ出さないよう月末日に合わせる
+  const lastDayOfTargetMonth = new Date(Date.UTC(year, month - 1 + months + 1, 0)).getUTCDate();
+  return dateKeyFromUtcDate(new Date(Date.UTC(year, month - 1 + months, Math.min(day, lastDayOfTargetMonth))));
 }
 
 export const RECURRENCE_DEFAULT_UNTIL_MONTHS = RECURRENCE_DEFAULT_HORIZON_MONTHS;

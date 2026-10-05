@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { checkIsSuperAdmin } from "@/lib/admin";
 import { fetchMyGroups, fetchMyProfile, updateDefaultGroup, type MyGroupInfo } from "@/lib/families";
 import { createClient } from "@/lib/supabase/client";
+import { clearUserPreferences } from "@/lib/userPreferences";
 import type { FamilyGroup } from "@/types/database";
 
 const SELECTED_GROUP_STORAGE_KEY = "yaruru:selectedGroupId";
@@ -162,6 +163,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 次回ログイン時にデフォルトの家族グループへ戻れるよう、このブラウザでの選択状態をクリアする
     setSelectedGroupId(null);
     if (typeof window !== "undefined") window.localStorage.removeItem(SELECTED_GROUP_STORAGE_KEY);
+    // 共有端末で次にログインした人に、前の人の絞り込み（検索キーワードなど）が残らないようにする
+    clearUserPreferences();
   }, [supabase]);
 
   return (

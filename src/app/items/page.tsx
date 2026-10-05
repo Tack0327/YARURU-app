@@ -20,9 +20,8 @@ import {
   type ItemFilters,
 } from "@/lib/items";
 import { createClient } from "@/lib/supabase/client";
+import { ITEM_FILTERS_STORAGE_KEY } from "@/lib/userPreferences";
 import type { Item, ItemStatus } from "@/types/database";
-
-const ITEM_FILTERS_STORAGE_KEY = "yaruru:itemsFilters";
 
 function ItemsContent() {
   const groups = useSelectableGroups();
@@ -47,6 +46,14 @@ function ItemsContent() {
     // handleChangeFiltersは毎回作り直される関数だが、groupsまたは絞り込みの家族が変わったときだけ確認すればよい
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groups, filters.groupId]);
+
+  // 保存していた担当者が今の家族のメンバーにいない場合（メンバーの削除・別の家族への切り替えなど）も絞り込みを外す。
+  // 外さないと、選択欄は「担当: すべて」と表示されるのに、実際には存在しない担当者で絞り込まれて一覧が空になる
+  useEffect(() => {
+    if (!filters.assigneeId || members.length === 0 || members.some((m) => m.profile_id === filters.assigneeId)) return;
+    handleChangeFilters({ ...filters, assigneeId: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members, filters.assigneeId]);
   const [error, setError] = useState<string | null>(null);
 
   const [selectionMode, setSelectionMode] = useState(false);

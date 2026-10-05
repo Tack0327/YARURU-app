@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addMonthsToDateKey,
   combineDateAndTimeJst,
   formatDateTimeJst,
   fromDatetimeLocalValue,
@@ -205,5 +206,21 @@ describe("dateUtils", () => {
       expect(keys[keys.length - 1]).toBe("2028-01-01");
       expect(keys).toHaveLength(25);
     });
+  });
+});
+
+describe("addMonthsToDateKey", () => {
+  it("通常は同じ日付のまま月を進める", () => {
+    expect(addMonthsToDateKey("2026-10-05", 3)).toBe("2027-01-05");
+  });
+
+  it("加算先の月にその日が無い場合は、翌月へはみ出さず月末日に合わせる", () => {
+    expect(addMonthsToDateKey("2026-11-30", 3)).toBe("2027-02-28");
+    expect(addMonthsToDateKey("2027-11-30", 3)).toBe("2028-02-29"); // うるう年
+    expect(addMonthsToDateKey("2026-08-31", 1)).toBe("2026-09-30");
+  });
+
+  it("年をまたいで24か月進められる", () => {
+    expect(addMonthsToDateKey("2026-01-31", 24)).toBe("2028-01-31");
   });
 });

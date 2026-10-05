@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/AuthProvider";
+import { NavigationTracker } from "@/components/NavigationTracker";
 import { ThemeSync } from "@/components/ThemeSync";
 import { ToastProvider } from "@/components/ToastProvider";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* ページ読み込みと並行してSupabaseへの接続（DNS・TLS）を先に確立し、初回アクセス時の体感速度を改善する */}
         {supabaseUrl && <link rel="preconnect" href={supabaseUrl} />}
         <ThemeSync />
+        <NavigationTracker />
         <AuthProvider>
           <ToastProvider>{children}</ToastProvider>
         </AuthProvider>
