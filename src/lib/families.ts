@@ -19,6 +19,30 @@ export async function fetchMyProfile(supabase: Client, userId: string): Promise<
   return data;
 }
 
+export const DISPLAY_NAME_MAX_LENGTH = 30;
+
+/** 表示名を検証する（純関数・テスト対象）。問題があれば利用者向けのメッセージを返す（問題なければnull） */
+export function validateDisplayName(name: string): string | null {
+  const trimmed = name.trim();
+  if (trimmed.length === 0) return "表示名を入力してください。";
+  if (trimmed.length > DISPLAY_NAME_MAX_LENGTH) return `表示名は${DISPLAY_NAME_MAX_LENGTH}文字以内で入力してください。`;
+  return null;
+}
+
+/**
+ * 自分の表示名を変更する。
+ * チケットの担当者・メモの編集者などは名前ではなくユーザーIDで保存しており、表示のたびにprofilesの表示名を引いているため、
+ * profilesを更新するだけで、完了済みを含む全てのチケットの担当者名が新しい名前で表示される（チケット側の更新は不要）。
+ * 画面右上のヘッダーはログイン情報（user_metadata）の表示名を使っているため、そちらも合わせて更新する。
+ */
+export async function updateMyDisplayName(supabase: Client, userId: string, name: string): Promise<void> {
+  const displayName = name.trim();
+  const { error } = await supabase.from("profiles").update({ display_name: displayName }).eq("id", userId);
+  if (error) throw error;
+  const { error: authError } = await supabase.auth.updateUser({ data: { display_name: displayName } });
+  if (authError) throw authError;
+}
+
 /**
  * ログイン後に最初に表示する家族グループを設定する（未設定に戻す場合はnullを渡す）。
  * RPC経由にすることで、所属していないグループIDが設定されないようDB側でも検証する。

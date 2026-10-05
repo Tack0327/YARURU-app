@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { joinFamilyGroupErrorMessage, validateGroupName } from "@/lib/families";
+import { joinFamilyGroupErrorMessage, validateDisplayName, validateGroupName } from "@/lib/families";
 
 describe("joinFamilyGroupErrorMessage", () => {
   it("DB関数が返した利用者向けのメッセージ（P0001）はそのまま表示する", () => {
@@ -32,5 +32,22 @@ describe("validateGroupName", () => {
 
   it("51文字以上は拒否する", () => {
     expect(validateGroupName("あ".repeat(51))).toBe("グループ名は50文字以内で入力してください。");
+  });
+});
+
+describe("validateDisplayName", () => {
+  it("前後の空白を除いて1〜30文字なら問題なし", () => {
+    expect(validateDisplayName("たかし")).toBeNull();
+    expect(validateDisplayName("  Tack  ")).toBeNull();
+    expect(validateDisplayName("あ".repeat(30))).toBeNull();
+  });
+
+  it("空・空白だけの名前は拒否する", () => {
+    expect(validateDisplayName("")).toBe("表示名を入力してください。");
+    expect(validateDisplayName("　 ")).toBe("表示名を入力してください。");
+  });
+
+  it("31文字以上は拒否する", () => {
+    expect(validateDisplayName("あ".repeat(31))).toBe("表示名は30文字以内で入力してください。");
   });
 });

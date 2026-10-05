@@ -10,6 +10,7 @@ import { deleteAccount } from "@/lib/admin";
 import { toErrorMessage } from "@/lib/errors";
 import {
   deleteFamilyGroup,
+  DISPLAY_NAME_MAX_LENGTH,
   fetchGroupMembers,
   fetchSoleMemberGroupIds,
   GROUP_NAME_MAX_LENGTH,
@@ -18,6 +19,8 @@ import {
   removeFamilyMember,
   renameFamilyGroup,
   transferGroupOwnership,
+  updateMyDisplayName,
+  validateDisplayName,
   validateGroupName,
   type MemberWithProfile,
 } from "@/lib/families";
@@ -59,6 +62,12 @@ function SettingsContent() {
   // nullは「グループ名を表示中」、文字列は「編集中（入力中の名前）」
   const [editingGroupName, setEditingGroupName] = useState<string | null>(null);
   const [savingGroupName, setSavingGroupName] = useState(false);
+  // nullは「表示名を表示中」、文字列は「編集中（入力中の名前）」
+  const [editingDisplayName, setEditingDisplayName] = useState<string | null>(null);
+  const [savingDisplayName, setSavingDisplayName] = useState(false);
+  const myDisplayName =
+    members.find((m) => m.profile_id === user?.id)?.profile.display_name ??
+    ((user?.user_metadata?.display_name as string | undefined) || "");
 
   const isOwner = group?.role === "owner";
   // 管理者ビュー中は役割をowner扱いにしているが、招待コードの再発行とメンバーの削除は
@@ -96,6 +105,27 @@ function SettingsContent() {
   useEffect(() => {
     loadMembers();
   }, [loadMembers]);
+
+  async function handleRenameDisplayName() {
+    if (!user || editingDisplayName === null) return;
+    const validationError = validateDisplayName(editingDisplayName);
+    if (validationError) {
+      showToast(validationError, "error");
+      return;
+    }
+    setSavingDisplayName(true);
+    try {
+      await updateMyDisplayName(supabase, user.id, editingDisplayName);
+      // メンバー一覧（この画面の自分の名前・担当者名の元データ）を読み直して、新しい名前を表示に反映する
+      loadMembers();
+      setEditingDisplayName(null);
+      showToast("表示名を変更しました");
+    } catch {
+      showToast("表示名を変更できませんでした。時間をおいて再度お試しください。", "error");
+    } finally {
+      setSavingDisplayName(false);
+    }
+  }
 
   async function handleRenameGroup() {
     if (!group || editingGroupName === null) return;
@@ -266,6 +296,112 @@ function SettingsContent() {
   return (
     <div className="flex flex-col gap-8">
       <h1 className="text-xl font-bold text-gray-100">設定</h1>
+
+      <section>
+        <h2 className="mb-2 text-sm font-bold text-gray-400">アカウント</h2>
+        <div className="mb-3 rounded-lg border border-gray-700 p-4">
+          <p className="mb-2 text-sm font-semibold text-gray-300">表示名</p>
+          {editingDisplayName !== null ? (
+            <div className="flex flex-col gap-2">
+              <input
+                type="text"
+                value={editingDisplayName}
+                onChange={(e) => setEditingDisplayName(e.target.value)}
+                maxLength={DISPLAY_NAME_MAX_LENGTH}
+                aria-label="新しい表示名"
+                className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
+              />
+              <p className="text-xs text-gray-500">変更すると、完了したものも含め、担当しているチケットの担当者名も新しい名前で表示されます。</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingDisplayName(null)}
+                  disabled={savingDisplayName}
+                  className="min-h-10 flex-1 rounded-lg border border-gray-600 text-sm font-semibold text-gray-300 disabled:opacity-50"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRenameDisplayName}
+                  disabled={savingDisplayName}
+                  className="min-h-10 flex-1 rounded-lg bg-blue-600 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {savingDisplayName ? "保存中..." : "保存する"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-sm text-gray-100">{myDisplayName}</span>
+              <button
+                type="button"
+                onClick={() => setEditingDisplayName(myDisplayName)}
+                className="min-h-8 shrink-0 rounded-lg border border-gray-600 px-3 text-xs font-semibold text-gray-300"
+              >
+                表示名を変更
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="mb-3 rounded-lg border border-gray-700 p-4">
+          <p className="mb-3 text-sm text-gray-300">
+            安全のため、パスワードの変更は登録メールアドレス（{user?.email}）に届く再設定メールのリンクから行います。
+          </p>
+          <button
+            type="button"
+            onClick={handleSendPasswordReset}
+            disabled={sendingPasswordReset || !user?.email}
+            className="min-h-10 w-full rounded-lg border border-gray-600 text-sm font-semibold text-gray-300 disabled:opacity-50"
+          >
+            {sendingPasswordReset ? "送信中..." : "パスワードを変更する（再設定メールを送信）"}
+          </button>
+        </div>
+        <div className="rounded-lg border border-red-300 p-4">
+          {accountDeleteError && (
+            <p className="mb-3 text-sm font-semibold text-red-300">{accountDeleteError}</p>
+          )}
+          {confirmingDeleteAccount ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-semibold text-red-300">
+                アカウントを削除しますか？所属している全てのグループから抜け、この操作は取り消せません。
+              </p>
+              {soleMemberGroupNames.length > 0 && (
+                <p className="text-sm font-semibold text-red-300">
+                  あなたが唯一のメンバーである次のグループも、アカウントと同時に削除されます：
+                  {soleMemberGroupNames.join("、")}
+                </p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDeleteAccount(false)}
+                  disabled={deletingAccount}
+                  className="min-h-10 flex-1 rounded-lg border border-gray-600 text-sm font-semibold text-gray-300 disabled:opacity-50"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={deletingAccount}
+                  className="min-h-10 flex-1 rounded-lg bg-red-600 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {deletingAccount ? "削除中..." : "削除する"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDeleteAccount(true)}
+              className="min-h-12 w-full text-base font-semibold text-red-400"
+            >
+              アカウントを削除する（退会）
+            </button>
+          )}
+        </div>
+      </section>
 
       <section>
         <h2 className="mb-2 text-sm font-bold text-gray-400">所属グループ</h2>
@@ -553,67 +689,6 @@ function SettingsContent() {
             </li>
           ))}
         </ul>
-      </section>
-
-      <section>
-        <h2 className="mb-2 text-sm font-bold text-gray-400">アカウント</h2>
-        <div className="mb-3 rounded-lg border border-gray-700 p-4">
-          <p className="mb-3 text-sm text-gray-300">
-            安全のため、パスワードの変更は登録メールアドレス（{user?.email}）に届く再設定メールのリンクから行います。
-          </p>
-          <button
-            type="button"
-            onClick={handleSendPasswordReset}
-            disabled={sendingPasswordReset || !user?.email}
-            className="min-h-10 w-full rounded-lg border border-gray-600 text-sm font-semibold text-gray-300 disabled:opacity-50"
-          >
-            {sendingPasswordReset ? "送信中..." : "パスワードを変更する（再設定メールを送信）"}
-          </button>
-        </div>
-        <div className="rounded-lg border border-red-300 p-4">
-          {accountDeleteError && (
-            <p className="mb-3 text-sm font-semibold text-red-300">{accountDeleteError}</p>
-          )}
-          {confirmingDeleteAccount ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-sm font-semibold text-red-300">
-                アカウントを削除しますか？所属している全てのグループから抜け、この操作は取り消せません。
-              </p>
-              {soleMemberGroupNames.length > 0 && (
-                <p className="text-sm font-semibold text-red-300">
-                  あなたが唯一のメンバーである次のグループも、アカウントと同時に削除されます：
-                  {soleMemberGroupNames.join("、")}
-                </p>
-              )}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDeleteAccount(false)}
-                  disabled={deletingAccount}
-                  className="min-h-10 flex-1 rounded-lg border border-gray-600 text-sm font-semibold text-gray-300 disabled:opacity-50"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDeleteAccount}
-                  disabled={deletingAccount}
-                  className="min-h-10 flex-1 rounded-lg bg-red-600 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  {deletingAccount ? "削除中..." : "削除する"}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmingDeleteAccount(true)}
-              className="min-h-12 w-full text-base font-semibold text-red-400"
-            >
-              アカウントを削除する（退会）
-            </button>
-          )}
-        </div>
       </section>
     </div>
   );
