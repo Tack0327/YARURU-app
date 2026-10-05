@@ -11,6 +11,7 @@ export type VersionHistoryEntry = {
  * package.jsonのversionを上げたら、先頭に1件追加する（tests/versionHistory.test.tsで一致を確認している）。
  */
 export const VERSION_HISTORY: VersionHistoryEntry[] = [
+  { version: "2.1.0", date: "2026-10-05", changes: ["新規登録のとき、担当者の初期値を自分（ログイン中のユーザー）にするように"] },
   {
     version: "2.0.0",
     date: "2026-10-05",

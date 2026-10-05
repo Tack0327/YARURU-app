@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { applyEnterContinuation, applyListPrefix, parseChecklistLine, toggleTaskLine, type ListPrefixKind } from "@/lib/checklist";
 import {
   addMonthsToDateKey,
@@ -52,6 +52,7 @@ function openPicker(e: MouseEvent<HTMLInputElement>) {
 export function ItemForm({
   members,
   initialItem,
+  defaultAssigneeId,
   submitting,
   submitLabel,
   onSubmit,
@@ -59,6 +60,8 @@ export function ItemForm({
 }: {
   members: MemberWithProfile[];
   initialItem?: Item;
+  /** 新規登録時の担当者の初期値（ログイン中のユーザーなど）。そのグループのメンバーにいる場合だけ使う */
+  defaultAssigneeId?: string;
   submitting: boolean;
   submitLabel: string;
   onSubmit: (values: ItemFormValues) => Promise<void> | void;
@@ -68,6 +71,16 @@ export function ItemForm({
   const [title, setTitle] = useState(initialItem?.title ?? "");
   const [description, setDescription] = useState(initialItem?.description ?? "");
   const [assigneeId, setAssigneeId] = useState(initialItem?.assignee_id ?? "");
+  // 利用者が担当者を自分で選んだ後は、初期値で上書きしない
+  const assigneeTouchedRef = useRef(false);
+
+  // メンバー一覧は画面を開いた後に読み込まれるため、読み込み後に初期値の担当者を設定する。
+  // 本人がそのグループのメンバーでない場合（スーパー管理者が他のグループを閲覧中など）は、
+  // 担当者にするとDBの所属チェックで登録に失敗するため設定しない
+  useEffect(() => {
+    if (initialItem || assigneeTouchedRef.current || assigneeId || !defaultAssigneeId) return;
+    if (members.some((member) => member.profile_id === defaultAssigneeId)) setAssigneeId(defaultAssigneeId);
+  }, [initialItem, members, defaultAssigneeId, assigneeId]);
   const [status, setStatus] = useState<ItemStatus>(initialItem?.status ?? "not_started");
   const [isAllDay, setIsAllDay] = useState(initialItem?.is_all_day ?? false);
 
@@ -502,7 +515,10 @@ export function ItemForm({
         <select
           id="assignee"
           value={assigneeId}
-          onChange={(e) => setAssigneeId(e.target.value)}
+          onChange={(e) => {
+            assigneeTouchedRef.current = true;
+            setAssigneeId(e.target.value);
+          }}
           className="w-full appearance-none rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
         >
           <option value="">未割り当て</option>

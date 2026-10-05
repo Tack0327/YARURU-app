@@ -80,6 +80,7 @@ function NewItemContent() {
       <h1 className="mb-6 text-xl font-bold text-gray-100">新規登録</h1>
       <ItemForm
         members={members}
+        defaultAssigneeId={user?.id}
         submitting={submitting}
         submitLabel="登録する"
         onSubmit={handleSubmit}
