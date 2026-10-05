@@ -14,6 +14,7 @@ import {
   bulkDeleteItems,
   bulkUpdateItems,
   fetchItems,
+  parseStoredItemFilters,
   planBulkDateChange,
   summarizeBulkChange,
   type ItemFilters,
@@ -21,13 +22,31 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { Item, ItemStatus } from "@/types/database";
 
+const ITEM_FILTERS_STORAGE_KEY = "yaruru:itemsFilters";
+
 function ItemsContent() {
   const groups = useSelectableGroups();
   const { showToast } = useToast();
   const [supabase] = useState(() => createClient());
   const [items, setItems] = useState<Item[] | null>(null);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
-  const [filters, setFilters] = useState<ItemFilters>({});
+  // 詳細画面などへ移動して戻ってきても前回の絞り込み条件のまま表示できるよう、ブラウザに保存した値から始める
+  const [filters, setFilters] = useState<ItemFilters>(() =>
+    typeof window === "undefined" ? {} : parseStoredItemFilters(window.localStorage.getItem(ITEM_FILTERS_STORAGE_KEY))
+  );
+
+  function handleChangeFilters(next: ItemFilters) {
+    setFilters(next);
+    window.localStorage.setItem(ITEM_FILTERS_STORAGE_KEY, JSON.stringify(next));
+  }
+
+  // 保存していた家族グループから脱退した場合などは、その絞り込みを外す（該当なしの一覧になって戸惑わないように）
+  useEffect(() => {
+    if (!filters.groupId || groups.length === 0 || groups.some((g) => g.id === filters.groupId)) return;
+    handleChangeFilters({ ...filters, groupId: undefined });
+    // handleChangeFiltersは毎回作り直される関数だが、groupsまたは絞り込みの家族が変わったときだけ確認すればよい
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, filters.groupId]);
   const [error, setError] = useState<string | null>(null);
 
   const [selectionMode, setSelectionMode] = useState(false);
@@ -227,7 +246,7 @@ function ItemsContent() {
         </div>
       </div>
 
-      <FilterBar filters={filters} members={members} groups={groups} onChange={setFilters} />
+      <FilterBar filters={filters} members={members} groups={groups} onChange={handleChangeFilters} />
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 

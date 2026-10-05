@@ -11,6 +11,7 @@ export type VersionHistoryEntry = {
  * package.jsonのversionを上げたら、先頭に1件追加する（tests/versionHistory.test.tsで一致を確認している）。
  */
 export const VERSION_HISTORY: VersionHistoryEntry[] = [
+  { version: "1.4.4", date: "2026-10-05", changes: ["チケット一覧の絞り込み・並び順を、他の画面から戻っても保持するように"] },
   {
     version: "1.4.3",
     date: "2026-10-05",

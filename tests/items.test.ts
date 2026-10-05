@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   chunkArray,
   fetchAllPages,
+  parseStoredItemFilters,
   planBulkDateChange,
   sortByIdOrder,
   sortItemsForHome,
@@ -269,5 +270,34 @@ describe("shouldNotifyForItem（終日）", () => {
     expect(shouldNotifyForItem({ status: "not_started", due_at: allDayDueJune16, is_all_day: true }, new Date("2026-06-15T14:00:00.000Z"))).toBe(false);
     // JST 6/16 01:00：残り23時間なので通知する
     expect(shouldNotifyForItem({ status: "not_started", due_at: allDayDueJune16, is_all_day: true }, new Date("2026-06-15T16:00:00.000Z"))).toBe(true);
+  });
+});
+
+describe("parseStoredItemFilters", () => {
+  it("保存した絞り込み条件をそのまま読み戻す", () => {
+    const filters = {
+      keyword: "買い物",
+      groupId: "g1",
+      assigneeId: "m1",
+      type: "todo",
+      status: "in_progress",
+      sortBy: "updated_at",
+      sortDirection: "desc",
+    };
+    expect(parseStoredItemFilters(JSON.stringify(filters))).toEqual(filters);
+  });
+
+  it("保存が無い・壊れている場合は絞り込みなしにする", () => {
+    expect(parseStoredItemFilters(null)).toEqual({});
+    expect(parseStoredItemFilters("{not json")).toEqual({});
+    expect(parseStoredItemFilters("123")).toEqual({});
+  });
+
+  it("想定外の値（存在しない種別・並び順、文字列以外、空文字）は無視する", () => {
+    expect(
+      parseStoredItemFilters(
+        JSON.stringify({ type: "memo", status: "archived", sortBy: "title", sortDirection: "up", keyword: 1, groupId: "", assigneeId: "m1" })
+      )
+    ).toEqual({ assigneeId: "m1" });
   });
 });

@@ -24,6 +24,43 @@ export type ItemFilters = {
   sortDirection?: SortDirection;
 };
 
+const ITEM_TYPES: readonly string[] = ["event", "todo"];
+const ITEM_STATUSES: readonly string[] = ["not_started", "in_progress", "done"];
+const SORT_FIELDS: readonly string[] = ["due_at", "created_at", "updated_at"];
+const SORT_DIRECTIONS: readonly string[] = ["asc", "desc"];
+
+/**
+ * ブラウザに保存しておいたチケット一覧の絞り込み条件を読み戻す（純関数・テスト対象）。
+ * 保存後に選択肢が変わった・手で書き換えられたなどで不正な値が混ざっていても画面が壊れないよう、
+ * 想定どおりの値だけを取り出し、それ以外は無視する（読めなければ絞り込みなし）。
+ */
+export function parseStoredItemFilters(stored: string | null): ItemFilters {
+  if (!stored) return {};
+  let raw: unknown;
+  try {
+    raw = JSON.parse(stored);
+  } catch {
+    return {};
+  }
+  if (!raw || typeof raw !== "object") return {};
+  const value = raw as Record<string, unknown>;
+  const pickString = (key: string) => (typeof value[key] === "string" && value[key] !== "" ? (value[key] as string) : undefined);
+  const pickOneOf = <T extends string>(key: string, allowed: readonly string[]) =>
+    typeof value[key] === "string" && allowed.includes(value[key] as string) ? (value[key] as T) : undefined;
+
+  const filters: ItemFilters = {
+    keyword: pickString("keyword"),
+    groupId: pickString("groupId"),
+    assigneeId: pickString("assigneeId"),
+    type: pickOneOf<ItemType>("type", ITEM_TYPES),
+    status: pickOneOf<ItemStatus>("status", ITEM_STATUSES),
+    sortBy: pickOneOf<SortField>("sortBy", SORT_FIELDS),
+    sortDirection: pickOneOf<SortDirection>("sortDirection", SORT_DIRECTIONS),
+  };
+  // 値の無い項目は持たせない（「絞り込みなし」の状態と区別できるようにするため）
+  return Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== undefined)) as ItemFilters;
+}
+
 function escapeLikePattern(value: string): string {
   return value.replace(/[%_\\]/g, (match) => `\\${match}`);
 }
