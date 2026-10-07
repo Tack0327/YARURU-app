@@ -10,7 +10,14 @@ import { ItemCard } from "@/components/ItemCard";
 import { LoadError } from "@/components/LoadError";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useSelectableGroups } from "@/hooks/useSelectableGroups";
-import { dateKeyJst, dueDeadlineMs, isOverdue, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
+import {
+  dateKeyJst,
+  dueDeadlineMs,
+  formatLongDateKey,
+  isOverdue,
+  upcomingRangeEndKey,
+  type UpcomingRange,
+} from "@/lib/dateUtils";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { fetchHolidays } from "@/lib/holidays";
 import { fetchItems, sortItemsForHome, sortItemsForSelectedDate } from "@/lib/items";
@@ -64,9 +71,8 @@ function HomeContent() {
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(initialDateParam || todayKey);
   // 「閉じる」を押しても選択日付そのものは覚えておき、「開く」で同じ日付をすぐ再表示できるようにする
   const [dateSectionOpen, setDateSectionOpen] = useState(true);
-  // カレンダーは月選択（months）から入り、月を選ぶと日表示（days）に切り替わる。
-  // dateクエリパラメータで特定の日付に戻ってきた場合は、最初から日表示にしておく。
-  const [calendarMode, setCalendarMode] = useState<"months" | "days">(initialDateParam ? "days" : "months");
+  // 開いてすぐ今月の日付が見えるよう日表示（days）から始める。月の見出しを押すと月選択（months）に切り替わる
+  const [calendarMode, setCalendarMode] = useState<"months" | "days">("days");
   const [upcomingRange, setUpcomingRange] = useState<UpcomingRange>("month");
   // 「完了を非表示にする」の状態は、他の画面へ移動して戻ってきても保つためにブラウザに保存する（ログアウト時に消える）
   const [hideCompleted, setHideCompleted] = useState(
@@ -203,7 +209,11 @@ function HomeContent() {
   }
 
   if (!items) {
-    return <p className="text-gray-400">読み込み中...</p>;
+    return (
+      <p role="status" className="text-gray-400">
+        読み込み中...
+      </p>
+    );
   }
 
   const memberNameOf = (id: string | null) => members.find((m) => m.profile_id === id)?.profile.display_name;
@@ -220,10 +230,15 @@ function HomeContent() {
   const selectedDateItems = selectedDateKey
     ? sortItemsForSelectedDate(visibleItems.filter((item) => itemCalendarDateKey(item) === selectedDateKey))
     : [];
+  // 日付を選んでいるときは、その日を初期値にした登録画面を開く
+  const newItemHref =
+    selectedDateKey && dateSectionOpen ? `/items/new?date=${encodeURIComponent(selectedDateKey)}` : "/items/new";
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
+      {/* グループの切り替え欄を出すときも、見出しで移動する人のためにページの見出しを置いておく */}
+      {selectableGroups.length > 1 && <h1 className="sr-only">ホーム（{group?.group.name}）</h1>}
+      <div className="flex items-center justify-between gap-3">
         {selectableGroups.length > 1 && group ? (
           <select
             value={group.group.id}
@@ -238,26 +253,46 @@ function HomeContent() {
             ))}
           </select>
         ) : (
-          <h1 className="text-xl font-bold text-gray-100">{group?.group.name}</h1>
+          <h1 className="min-w-0 truncate text-xl font-bold text-gray-100">{group?.group.name}</h1>
         )}
         <Link
-          href="/items/new"
-          className="flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white"
+          href={newItemHref}
+          className="flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white"
         >
-          + 新規登録
+          + 追加
         </Link>
       </div>
 
-      <section>
+      {/* 一番急ぐものなので、1件以上あるときだけ最初に出す */}
+      {overdueItems.length > 0 && (
+        <section aria-labelledby="overdue-heading">
+          <h2 id="overdue-heading" className="mb-3 text-sm font-bold text-red-400">
+            期限超過（{overdueItems.length}件）
+          </h2>
+          <ItemCardList items={overdueItems} memberNameOf={memberNameOf} />
+        </section>
+      )}
+
+      <section aria-label="カレンダー">
         {calendarMode === "months" ? (
           <>
             <div className="mb-2 flex items-center justify-between">
-              <button onClick={goToPrevYear} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
-                ＜
+              <button
+                type="button"
+                onClick={goToPrevYear}
+                aria-label="前の年"
+                className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300"
+              >
+                <span aria-hidden="true">＜</span>
               </button>
               <h2 className="text-base font-bold text-gray-100">{year}年</h2>
-              <button onClick={goToNextYear} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
-                ＞
+              <button
+                type="button"
+                onClick={goToNextYear}
+                aria-label="次の年"
+                className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300"
+              >
+                <span aria-hidden="true">＞</span>
               </button>
             </div>
             <MonthGridView
@@ -275,20 +310,30 @@ function HomeContent() {
         ) : (
           <>
             <div className="mb-2 flex items-center justify-between">
-              <button onClick={goToPrevMonth} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
-                ＜
+              <button
+                type="button"
+                onClick={goToPrevMonth}
+                aria-label="前の月"
+                className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300"
+              >
+                <span aria-hidden="true">＜</span>
               </button>
               <button
                 type="button"
                 onClick={() => setCalendarMode("months")}
-                aria-label="月選択に戻る"
-                className="flex min-h-10 items-center gap-1 rounded-lg border border-gray-600 px-3 text-base font-bold text-gray-100"
+                aria-label={`${year}年${month + 1}月（押すと月を選べます）`}
+                className="flex min-h-10 items-center gap-1 rounded-lg border border-gray-600 px-3 text-base font-bold text-gray-100 tabular-nums"
               >
                 {year}年{month + 1}月
                 <span aria-hidden className="text-xs text-gray-400">▾</span>
               </button>
-              <button onClick={goToNextMonth} className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300">
-                ＞
+              <button
+                type="button"
+                onClick={goToNextMonth}
+                aria-label="次の月"
+                className="min-h-10 min-w-10 rounded-lg border border-gray-600 text-gray-300"
+              >
+                <span aria-hidden="true">＞</span>
               </button>
             </div>
             <CalendarView
@@ -317,24 +362,29 @@ function HomeContent() {
           type="checkbox"
           checked={hideCompleted}
           onChange={(e) => handleToggleHideCompleted(e.target.checked)}
-          className="h-4 w-4 rounded border-gray-600"
+          className="size-4 rounded border-gray-600"
         />
         完了を非表示にする
       </label>
 
       {selectedDateKey && (
-        <section>
+        <section aria-labelledby="selected-date-heading">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-400">{selectedDateKey}</h2>
+            <h2 id="selected-date-heading" className="text-sm font-bold text-gray-400">
+              {formatLongDateKey(selectedDateKey)}
+            </h2>
             <button
+              type="button"
               onClick={() => setDateSectionOpen((prev) => !prev)}
-              className="text-xs font-semibold text-blue-400"
+              aria-expanded={dateSectionOpen}
+              aria-controls="selected-date-panel"
+              className="min-h-8 px-1 text-xs font-semibold text-blue-400"
             >
               {dateSectionOpen ? "閉じる" : "開く"}
             </button>
           </div>
           {dateSectionOpen && (
-            <>
+            <div id="selected-date-panel">
               {holidays.get(selectedDateKey) && (
                 <p className="mb-3 text-sm font-semibold text-red-400">{holidays.get(selectedDateKey)}</p>
               )}
@@ -350,34 +400,32 @@ function HomeContent() {
                 </div>
               )}
               {selectedDateItems.length === 0 ? (
-                <p className="text-sm text-gray-500">この日の予定・実施作業はありません</p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {selectedDateItems.map((item) => (
-                    <ItemCard key={item.id} item={item} assigneeName={memberNameOf(item.assignee_id)} />
-                  ))}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="text-sm text-gray-400">この日の予定・作業はありません</p>
+                  <Link href={newItemHref} className="text-sm font-semibold text-blue-400">
+                    + この日に追加
+                  </Link>
                 </div>
+              ) : (
+                <ItemCardList items={selectedDateItems} memberNameOf={memberNameOf} />
               )}
-            </>
+            </div>
           )}
         </section>
       )}
 
-      <Section
-        title="期限超過"
-        items={overdueItems}
-        emptyText="期限超過の項目はありません"
-        memberNameOf={memberNameOf}
-      />
-      <section>
+      <section aria-labelledby="upcoming-heading">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-gray-400">今後の予定</h2>
-          <div className="flex flex-wrap gap-1">
+          <h2 id="upcoming-heading" className="text-sm font-bold text-gray-400">
+            今後の予定・作業
+          </h2>
+          <div role="group" aria-label="表示する期間" className="flex flex-wrap gap-1">
             {UPCOMING_RANGE_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => setUpcomingRange(option.value)}
+                aria-pressed={upcomingRange === option.value}
                 className={`min-h-8 rounded-full border px-3 text-xs font-semibold ${
                   upcomingRange === option.value
                     ? "border-blue-600 bg-blue-600 text-white"
@@ -390,50 +438,48 @@ function HomeContent() {
           </div>
         </div>
         {upcomingItems.length === 0 ? (
-          <p className="text-sm text-gray-500">今後の予定・実施作業はありません</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {upcomingItems.map((item) => (
-              <ItemCard key={item.id} item={item} assigneeName={memberNameOf(item.assignee_id)} />
-            ))}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <p className="text-sm text-gray-400">この期間の予定・作業はありません</p>
+            <Link href="/items/new" className="text-sm font-semibold text-blue-400">
+              + 追加
+            </Link>
           </div>
+        ) : (
+          <ItemCardList items={upcomingItems} memberNameOf={memberNameOf} />
         )}
       </section>
     </div>
   );
 }
 
-function Section({
-  title,
+function ItemCardList({
   items,
-  emptyText,
   memberNameOf,
 }: {
-  title: string;
   items: Item[];
-  emptyText: string;
   memberNameOf: (id: string | null) => string | undefined;
 }) {
   return (
-    <section>
-      <h2 className="mb-3 text-sm font-bold text-gray-400">{title}</h2>
-      {items.length === 0 ? (
-        <p className="text-sm text-gray-500">{emptyText}</p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} assigneeName={memberNameOf(item.assignee_id)} />
-          ))}
-        </div>
-      )}
-    </section>
+    <ul className="flex flex-col gap-3">
+      {items.map((item) => (
+        <li key={item.id}>
+          <ItemCard item={item} assigneeName={memberNameOf(item.assignee_id)} />
+        </li>
+      ))}
+    </ul>
   );
 }
 
 export default function HomePage() {
   return (
     <RequireAuth requireGroup showNav>
-      <Suspense fallback={<p className="text-gray-400">読み込み中...</p>}>
+      <Suspense
+        fallback={
+          <p role="status" className="text-gray-400">
+            読み込み中...
+          </p>
+        }
+      >
         <HomeContent />
       </Suspense>
     </RequireAuth>

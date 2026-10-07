@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Zen_Maru_Gothic } from "next/font/google";
 import { AuthProvider } from "@/components/AuthProvider";
 import { NavigationTracker } from "@/components/NavigationTracker";
 import { ThemeSync } from "@/components/ThemeSync";
@@ -7,14 +7,13 @@ import { ToastProvider } from "@/components/ToastProvider";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+// 生活の予定を共有するアプリらしい柔らかさを、各画面の見出し（h1）にだけ出す。本文は読みやすさを優先してOSの日本語フォントを使う。
+// 日本語フォントは文字の範囲ごとに分割されて配信され、ページで使う文字の分だけ読み込まれるため、先読み（preload）はしない
+const headingFont = Zen_Maru_Gothic({
+  variable: "--font-heading",
+  weight: "700",
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -33,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ja"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${headingFont.variable} h-full antialiased`}
       // 「薄暗い背景/白ベース」の選択をhtmlタグに直接反映するスクリプトを使っているため、
       // サーバー側でレンダリングした内容とクライアント側の実際のクラスが異なることをReactに警告させない
       suppressHydrationWarning

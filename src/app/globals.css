@@ -1,15 +1,26 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  /* 日本語はOSの読みやすいフォントを使う（以前のArial指定では、日本語の字形がOS任せでばらついていた） */
+  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
 }
 
 body {
   /* 背景色・文字色はlayout.tsxのbg-gray-900/text-gray-100（テーマ切替に対応するTailwindのクラス）に委ねる。
      ここでbackground/colorを指定すると、レイヤーなし（unlayered）のこのルールが@layer utilities内の
      クラスより常に優先されてしまい、薄暗い背景On/Offがbodyに反映されなくなる。 */
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* 各画面の見出しだけ、layout.tsxで読み込む丸ゴシックにする（読み込み前・失敗時は本文と同じフォント） */
+h1 {
+  font-family: var(--font-heading), var(--font-sans);
+}
+
+/* 長い見出しが折り返したとき、2行目に1〜2文字だけ残らないよう行の長さを揃える */
+h1,
+h2 {
+  text-wrap: balance;
 }
 
 button,
@@ -44,6 +55,8 @@ input[type="datetime-local"] {
  * ここで変数の値を反転させるだけで、今後どの画面に新しい色クラス（gray/blue/red/green/amber）を
  * 追加しても、コード側の変更なしに両方の背景に自動的に対応できる。
  * ボタン等に使う彩度の高い中間色（400/500/600）はどちらの背景でも視認できるため、反転対象から外している。
+ * ただしgray-500は反転されないため、文字色に使うとどちらの背景でもコントラストが足りない。
+ * 補足などの薄い文字はgray-400（反転される）を使う。
  */
 .theme-light {
   --color-gray-50: oklch(13% 0.028 261.692);

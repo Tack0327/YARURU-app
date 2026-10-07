@@ -66,6 +66,7 @@ function ItemsContent() {
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   // 複数の家族グループを横断表示している間は、担当者の一括変更を許可しない
   // （別グループのメンバーを担当者に設定できてしまうため。家族を1つに絞り込んだ場合のみ許可する）
@@ -106,6 +107,13 @@ function ItemsContent() {
     setBulkStatus("");
     setBulkStartDate("");
     setBulkDueDate("");
+    setBulkError(null);
+  }
+
+  const hasFilters = !!(filters.keyword || filters.type || filters.status || filters.assigneeId || filters.groupId);
+
+  function handleClearFilters() {
+    handleChangeFilters({ sortBy: filters.sortBy, sortDirection: filters.sortDirection });
   }
 
   function handleToggleSelectionMode() {
@@ -137,19 +145,20 @@ function ItemsContent() {
       startDateKey: bulkStartDate || undefined,
       dueDateKey: bulkDueDate || undefined,
     });
+    // 入力の見直しが必要な理由は、トーストではすぐ消えてしまうため一括操作バーの中に残す
     // 一部だけ変更されて中途半端な状態にならないよう、1件でも日付が矛盾する場合は担当者・ステータスも含めて何も変更しない
     if (datePlan.conflictIds.length > 0) {
-      showToast(
-        `${datePlan.conflictIds.length}件で期限日が開始日より前になるため、変更を中止しました。日付を見直してください。`,
-        "error"
+      setBulkError(
+        `${datePlan.conflictIds.length}件で期限日が開始日より前になるため、変更を中止しました。日付を見直してください。`
       );
       return;
     }
     if (!bulkAssigneeId && !bulkStatus && datePlan.updates.length === 0) {
-      showToast("期限日は実施作業にのみ設定できます。実施作業を選択してください。", "error");
+      setBulkError("期限日は実施作業にのみ設定できます。実施作業を選択してください。");
       return;
     }
 
+    setBulkError(null);
     setBulkSubmitting(true);
     try {
       await bulkUpdateItems(supabase, [...selectedIds], {
@@ -170,7 +179,7 @@ function ItemsContent() {
       resetBulkInputs();
       await load();
     } catch {
-      showToast("まとめて変更できませんでした。もう一度お試しください。", "error");
+      setBulkError("まとめて変更できませんでした。通信状況をご確認のうえ、もう一度お試しください。");
     } finally {
       setBulkSubmitting(false);
     }
@@ -227,7 +236,7 @@ function ItemsContent() {
       showToast(`${selectedIds.size}件をまとめて削除しました`);
       await load();
     } catch {
-      showToast("まとめて削除できませんでした。もう一度お試しください。", "error");
+      setBulkError("まとめて削除できませんでした。通信状況をご確認のうえ、もう一度お試しください。");
     } finally {
       setBulkDeleting(false);
     }
@@ -235,21 +244,22 @@ function ItemsContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-100">チケット一覧</h1>
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl font-bold text-gray-100">予定・作業の一覧</h1>
+        <div className="flex shrink-0 gap-2">
           <button
             type="button"
             onClick={handleToggleSelectionMode}
-            className="flex min-h-10 items-center justify-center rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-300"
+            aria-pressed={selectionMode}
+            className="flex min-h-10 items-center justify-center rounded-lg border border-gray-600 px-3 text-sm font-semibold text-gray-300"
           >
-            {selectionMode ? "選択をやめる" : "チケット選択"}
+            {selectionMode ? "選択をやめる" : "選んで操作"}
           </button>
           <Link
             href="/items/new"
             className="flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white"
           >
-            + 新規登録
+            + 追加
           </Link>
         </div>
       </div>
@@ -259,9 +269,25 @@ function ItemsContent() {
       {error ? (
         <LoadError message={error} onRetry={load} />
       ) : !items ? (
-        <p className="text-gray-400">読み込み中...</p>
+        <p role="status" className="text-gray-400">
+          読み込み中...
+        </p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-gray-500">該当する項目はありません</p>
+        // 空のときは、次にできること（絞り込みの解除か、最初の1件の追加）を1つだけ示す
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="text-sm text-gray-400">
+            {hasFilters ? "条件に合う予定・作業はありません" : "まだ予定・作業がありません"}
+          </p>
+          {hasFilters ? (
+            <button type="button" onClick={handleClearFilters} className="min-h-8 text-sm font-semibold text-blue-400">
+              絞り込みを解除
+            </button>
+          ) : (
+            <Link href="/items/new" className="text-sm font-semibold text-blue-400">
+              + 最初の予定・作業を追加
+            </Link>
+          )}
+        </div>
       ) : (
         <>
           {selectionMode && (
@@ -273,19 +299,20 @@ function ItemsContent() {
               {selectedIds.size === items.length ? "すべて解除" : "すべて選択"}
             </button>
           )}
-          <div className={`flex flex-col gap-3 ${selectionMode && selectedIds.size > 0 ? "pb-64" : ""}`}>
+          <ul className={`flex flex-col gap-3 ${selectionMode && selectedIds.size > 0 ? "pb-64" : ""}`}>
             {items.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                assigneeName={memberNameOf(item.assignee_id)}
-                groupName={groups.length > 1 ? groupNameOf(item.group_id) : undefined}
-                selectionMode={selectionMode}
-                selected={selectedIds.has(item.id)}
-                onToggleSelect={() => handleToggleSelect(item.id)}
-              />
+              <li key={item.id}>
+                <ItemCard
+                  item={item}
+                  assigneeName={memberNameOf(item.assignee_id)}
+                  groupName={groups.length > 1 ? groupNameOf(item.group_id) : undefined}
+                  selectionMode={selectionMode}
+                  selected={selectedIds.has(item.id)}
+                  onToggleSelect={() => handleToggleSelect(item.id)}
+                />
+              </li>
             ))}
-          </div>
+          </ul>
         </>
       )}
 
@@ -300,6 +327,7 @@ function ItemsContent() {
           submitting={bulkSubmitting}
           deleting={bulkDeleting}
           exporting={exporting}
+          error={bulkError}
           allowAssigneeChange={allowBulkAssigneeChange}
           onAssigneeChange={setBulkAssigneeId}
           onStatusChange={setBulkStatus}
@@ -309,7 +337,10 @@ function ItemsContent() {
           onDelete={handleBulkDelete}
           onExportDownload={handleExportDownload}
           onExportEmail={handleExportEmail}
-          onCancel={() => setSelectedIds(new Set())}
+          onCancel={() => {
+            setSelectedIds(new Set());
+            setBulkError(null);
+          }}
         />
       )}
     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { ItemCard } from "@/components/ItemCard";
@@ -40,19 +41,33 @@ function HistoryContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-bold text-gray-100">完了履歴</h1>
+      <div>
+        <h1 className="text-xl font-bold text-gray-100">完了履歴</h1>
+        <p className="mt-1 text-sm text-pretty text-gray-400">
+          完了から14日たつと、ホームと一覧には表示されなくなります。ここでは完了したものをすべて確認できます。
+        </p>
+      </div>
       {error ? (
         <LoadError message={error} onRetry={load} />
       ) : !items ? (
-        <p className="text-gray-400">読み込み中...</p>
+        <p role="status" className="text-gray-400">
+          読み込み中...
+        </p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-gray-500">完了した項目はまだありません</p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} assigneeName={memberNameOf(item.assignee_id)} />
-          ))}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="text-sm text-gray-400">完了した予定・作業はまだありません</p>
+          <Link href="/items" className="text-sm font-semibold text-blue-400">
+            一覧を見る
+          </Link>
         </div>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {items.map((item) => (
+            <li key={item.id}>
+              <ItemCard item={item} assigneeName={memberNameOf(item.assignee_id)} showCompletedAt />
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

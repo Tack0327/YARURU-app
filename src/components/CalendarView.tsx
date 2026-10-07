@@ -1,6 +1,6 @@
 "use client";
 
-import { ITEM_TYPE_ACCENT, type ItemType } from "@/types/database";
+import { ITEM_TYPE_ACCENT, ITEM_TYPE_LABEL, NOTE_ACCENT, type ItemType } from "@/types/database";
 
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 const ALL_ITEM_TYPES: ItemType[] = ["event", "todo"];
@@ -78,6 +78,19 @@ export function buildCalendarDays(
   return days;
 }
 
+function calendarDayLabel(month: number, day: CalendarDay): string {
+  return [
+    `${month + 1}月${day.dayOfMonth}日（${WEEKDAY_LABELS[day.dayOfWeek]}）`,
+    day.holidayName,
+    day.isToday && "今日",
+    day.types.includes("event") && "予定あり",
+    day.types.includes("todo") && "実施作業あり",
+    day.hasNote && "メモあり",
+  ]
+    .filter(Boolean)
+    .join("、");
+}
+
 /** 平日は既定色、土曜は薄い青、日曜・祝日は薄い赤で表示する */
 function dayTextColor(day: CalendarDay): string {
   if (day.holidayName || day.dayOfWeek === 0) return "text-red-400";
@@ -110,20 +123,25 @@ export function CalendarView({
 
   return (
     <div>
-      <div className="grid grid-cols-7 text-center text-xs font-semibold text-gray-500">
+      <div aria-hidden="true" className="grid grid-cols-7 text-center text-xs font-semibold text-gray-400">
         {WEEKDAY_LABELS.map((label) => (
           <div key={label} className="py-2">
             {label}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1 tabular-nums">
         {days.map((day, index) => (
           <button
             key={`${day.dateKey || "pad"}-${index}`}
             type="button"
             disabled={!day.isCurrentMonth}
             onClick={() => day.isCurrentMonth && onSelectDate(day.dateKey)}
+            // 数字と色の点だけでは読み上げで伝わらないため、日付・曜日・祝日・予定やメモの有無を名前にする
+            aria-label={day.isCurrentMonth ? calendarDayLabel(month, day) : undefined}
+            aria-hidden={day.isCurrentMonth ? undefined : true}
+            aria-pressed={day.isCurrentMonth ? day.dateKey === selectedDateKey : undefined}
+            aria-current={day.isToday ? "date" : undefined}
             className={`flex min-h-14 flex-col items-center justify-center rounded-lg border text-sm ${
               !day.isCurrentMonth
                 ? "border-transparent text-gray-600"
@@ -134,13 +152,14 @@ export function CalendarView({
                     : `border-gray-700 ${dayTextColor(day)}`
             }`}
           >
-            <span>{day.dayOfMonth}</span>
+            <span aria-hidden="true">{day.dayOfMonth}</span>
             {(day.types.length > 0 || day.hasNote) && (
-              <span className="mt-0.5 flex gap-0.5">
+              <span aria-hidden="true" className="mt-0.5 flex items-center gap-0.5">
                 {day.types.map((type) => (
-                  <span key={type} className={`h-1.5 w-1.5 rounded-full ${ITEM_TYPE_ACCENT[type].dot}`} />
+                  <span key={type} className={`size-1.5 rounded-full ${ITEM_TYPE_ACCENT[type].dot}`} />
                 ))}
-                {day.hasNote && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                {/* メモは予定・実施作業の丸と見分けられるよう、色だけでなく形（横長）も変える */}
+                {day.hasNote && <span className={`h-1.5 w-3 rounded-sm ${NOTE_ACCENT.mark}`} />}
               </span>
             )}
           </button>
@@ -173,11 +192,14 @@ export function MonthGridView({
         const yearMonthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
         const types = typesByYearMonth.get(yearMonthKey);
         const isToday = year === todayYear && month === todayMonth;
+        const typeLabels = ALL_ITEM_TYPES.filter((type) => types?.has(type)).map((type) => `${ITEM_TYPE_LABEL[type]}あり`);
         return (
           <button
             key={month}
             type="button"
             onClick={() => onSelectMonth(month)}
+            aria-label={[`${year}年${month + 1}月`, isToday && "今月", ...typeLabels].filter(Boolean).join("、")}
+            aria-current={isToday ? "date" : undefined}
             className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-base font-semibold ${
               month === selectedMonth
                 ? "border-blue-600 bg-blue-950 text-blue-300"
@@ -186,11 +208,11 @@ export function MonthGridView({
                   : "border-gray-700 text-gray-300"
             }`}
           >
-            <span>{month + 1}月</span>
+            <span aria-hidden="true">{month + 1}月</span>
             {types && types.size > 0 && (
-              <span className="flex gap-0.5">
+              <span aria-hidden="true" className="flex gap-0.5">
                 {ALL_ITEM_TYPES.filter((type) => types.has(type)).map((type) => (
-                  <span key={type} className={`h-1.5 w-1.5 rounded-full ${ITEM_TYPE_ACCENT[type].dot}`} />
+                  <span key={type} className={`size-1.5 rounded-full ${ITEM_TYPE_ACCENT[type].dot}`} />
                 ))}
               </span>
             )}

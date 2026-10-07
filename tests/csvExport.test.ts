@@ -94,7 +94,7 @@ describe("parseCsvEmailRequest", () => {
   it("UUIDの形式でないIDは、入力の誤りとして拒否する", () => {
     expect(parseCsvEmailRequest({ itemIds: [ID_A, "not-a-uuid"], purpose: "jira" })).toEqual({
       ok: false,
-      error: "選択したチケットの情報が正しくありません。画面を再読み込みしてから再度お試しください。",
+      error: "選択した予定・作業の情報が正しくありません。画面を再読み込みしてから再度お試しください。",
     });
   });
 
@@ -108,7 +108,7 @@ describe("parseCsvEmailRequest", () => {
 
   it("本文が無い・IDが配列でない・空・文字列以外を含む場合は拒否する", () => {
     for (const body of [null, "x", {}, { itemIds: "a", purpose: "jira" }, { itemIds: [], purpose: "jira" }, { itemIds: ["a", 1], purpose: "jira" }, { itemIds: [""], purpose: "jira" }]) {
-      expect(parseCsvEmailRequest(body)).toEqual({ ok: false, error: `チケットを1〜${CSV_EXPORT_MAX_ITEMS}件選択してください。` });
+      expect(parseCsvEmailRequest(body)).toEqual({ ok: false, error: `予定・作業を1〜${CSV_EXPORT_MAX_ITEMS}件選択してください。` });
     }
   });
 

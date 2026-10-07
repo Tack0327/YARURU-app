@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { applyEnterContinuation, applyListPrefix, parseChecklistLine, toggleTaskLine, type ListPrefixKind } from "@/lib/checklist";
 import {
   addMonthsToDateKey,
@@ -22,11 +22,18 @@ import {
   type RecurrenceFreq,
 } from "@/types/database";
 
-// ホームやチケット一覧の左端の色（予定=緑、実施作業=オレンジ）と揃える
+// ホームや一覧の左端の色（予定=緑、実施作業=黄）と揃える
 const ITEM_TYPE_SELECTED_CLASS: Record<ItemType, string> = {
   event: "border-green-600 bg-green-950 text-green-300",
   todo: "border-amber-600 bg-amber-950 text-amber-300",
 };
+
+// 新規登録で日付だけが決まっているとき、実施作業の開始・期限の時刻に入れておく初期値
+const DEFAULT_TODO_START_TIME = "09:00";
+const DEFAULT_TODO_DUE_TIME = "18:00";
+
+const INPUT_CLASS =
+  "w-full rounded-lg border bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500 aria-[invalid=true]:border-red-400";
 
 export type ItemFormValues = {
   type: ItemType;
@@ -41,6 +48,9 @@ export type ItemFormValues = {
   recurrence: { freq: RecurrenceFreq; startDateKey: string; startTime: string; endTime: string; untilDateKey: string } | null;
 };
 
+/** 入力チェックのエラーと、それが出た入力欄のid */
+type FieldError = { field: string; message: string };
+
 const RECURRENCE_OPTIONS: RecurrenceFreq[] = ["daily", "weekly", "biweekly", "monthly"];
 
 // 日付/時刻入力はカレンダーアイコン部分をクリックしないと選択UIが開かないため、
@@ -49,24 +59,41 @@ function openPicker(e: MouseEvent<HTMLInputElement>) {
   e.currentTarget.showPicker?.();
 }
 
+function RequiredMark() {
+  // 必須であることはinputのrequiredで読み上げに伝わるため、記号自体は読み上げない
+  return (
+    <span aria-hidden="true" className="text-red-400">
+      *
+    </span>
+  );
+}
+
 export function ItemForm({
   members,
   initialItem,
+  initialDateKey,
   defaultAssigneeId,
   submitting,
   submitLabel,
+  submitError,
   onSubmit,
   onCancel,
 }: {
   members: MemberWithProfile[];
   initialItem?: Item;
+  /** 新規登録時に日付欄へ入れておく日付（「YYYY-MM-DD」。ホームで選んでいた日など） */
+  initialDateKey?: string;
   /** 新規登録時の担当者の初期値（ログイン中のユーザーなど）。そのグループのメンバーにいる場合だけ使う */
   defaultAssigneeId?: string;
   submitting: boolean;
   submitLabel: string;
+  /** 保存に失敗したときのメッセージ（保存ボタンのすぐ上に出す） */
+  submitError?: string | null;
   onSubmit: (values: ItemFormValues) => Promise<void> | void;
   onCancel?: () => void;
 }) {
+  const newDateKey = initialItem ? "" : (initialDateKey ?? "");
+
   const [type, setType] = useState<ItemType>(initialItem?.type ?? "todo");
   const [title, setTitle] = useState(initialItem?.title ?? "");
   const [description, setDescription] = useState(initialItem?.description ?? "");
@@ -85,20 +112,49 @@ export function ItemForm({
   const [isAllDay, setIsAllDay] = useState(initialItem?.is_all_day ?? false);
 
   // 予定用（日付・開始時間・終了時間を分けて管理する）
-  const [eventDate, setEventDate] = useState(dateKeyJst(initialItem?.start_at ?? null));
+  const [eventDate, setEventDate] = useState(initialItem ? dateKeyJst(initialItem.start_at) : newDateKey);
   const [startTime, setStartTime] = useState(timeOfDayJst(initialItem?.start_at ?? null));
   const [endTime, setEndTime] = useState(timeOfDayJst(initialItem?.end_at ?? null));
   const [recurrenceFreq, setRecurrenceFreq] = useState<RecurrenceFreq | "none">("none");
   const [recurrenceUntil, setRecurrenceUntil] = useState("");
 
   // 実施作業用（終日でなければ従来通り日時で管理する）
-  const [startAtLocal, setStartAtLocal] = useState(toDatetimeLocalValue(initialItem?.start_at ?? null));
-  const [dueAtLocal, setDueAtLocal] = useState(toDatetimeLocalValue(initialItem?.due_at ?? null));
-  const [startDateOnly, setStartDateOnly] = useState(dateKeyJst(initialItem?.start_at ?? null));
-  const [dueDateOnly, setDueDateOnly] = useState(dateKeyJst(initialItem?.due_at ?? null));
+  const [startAtLocal, setStartAtLocal] = useState(
+    initialItem ? toDatetimeLocalValue(initialItem.start_at) : newDateKey && `${newDateKey}T${DEFAULT_TODO_START_TIME}`
+  );
+  const [dueAtLocal, setDueAtLocal] = useState(
+    initialItem ? toDatetimeLocalValue(initialItem.due_at) : newDateKey && `${newDateKey}T${DEFAULT_TODO_DUE_TIME}`
+  );
+  const [startDateOnly, setStartDateOnly] = useState(initialItem ? dateKeyJst(initialItem.start_at) : newDateKey);
+  const [dueDateOnly, setDueDateOnly] = useState(initialItem ? dateKeyJst(initialItem.due_at) : newDateKey);
 
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FieldError | null>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  /** 入力チェックのエラーを該当する欄の下に出し、その欄へフォーカスを移す（長いフォームでも直す場所がすぐ分かるように） */
+  function fail(field: string, message: string) {
+    setError({ field, message });
+    requestAnimationFrame(() => document.getElementById(field)?.focus());
+  }
+
+  /** 入力欄に付ける、エラーの状態と説明文の関連付け */
+  function fieldProps(field: string) {
+    const invalid = error?.field === field;
+    return {
+      "aria-invalid": invalid || undefined,
+      "aria-describedby": invalid ? `${field}-error` : undefined,
+      className: `${INPUT_CLASS} ${invalid ? "border-red-400" : "border-gray-600"}`,
+    };
+  }
+
+  function errorFor(field: string): ReactNode {
+    if (error?.field !== field) return null;
+    return (
+      <p id={`${field}-error`} role="alert" className="mt-1 text-sm text-red-400">
+        {error.message}
+      </p>
+    );
+  }
 
   function handleApplyListPrefix(kind: ListPrefixKind) {
     const el = descriptionRef.current;
@@ -129,36 +185,22 @@ export function ItemForm({
     e.preventDefault();
     setError(null);
 
-    if (!title.trim()) {
-      setError("タイトルを入力してください。");
-      return;
-    }
+    if (!title.trim()) return fail("title", "タイトルを入力してください。");
 
     if (type === "event") {
-      if (!eventDate) {
-        setError("日付を入力してください。");
-        return;
-      }
-      if (!isAllDay && !startTime) {
-        setError("開始時間を入力してください。");
-        return;
-      }
+      if (!eventDate) return fail("eventDate", "日付を入力してください。");
+      if (!isAllDay && !startTime) return fail("startTime", "開始時間を入力してください。");
       if (!isAllDay && endTime && startTime && endTime < startTime) {
-        setError("終了時間は開始時間より後にしてください。");
-        return;
+        return fail("endTime", "終了時間は開始時間より後にしてください。");
       }
       if (!initialItem && recurrenceFreq !== "none") {
-        if (!recurrenceUntil) {
-          setError("繰り返しの期限（ここまで）を入力してください。");
-          return;
-        }
-        if (recurrenceUntil < eventDate) {
-          setError("繰り返しの期限は開始日より後にしてください。");
-          return;
-        }
+        if (!recurrenceUntil) return fail("recurrenceUntil", "繰り返しの期限（ここまで）を入力してください。");
+        if (recurrenceUntil < eventDate) return fail("recurrenceUntil", "繰り返しの期限は開始日より後にしてください。");
         if (recurrenceUntil > addMonthsToDateKey(eventDate, RECURRENCE_MAX_HORIZON_MONTHS)) {
-          setError(`繰り返しの期限は開始日から最大${RECURRENCE_MAX_HORIZON_MONTHS}か月後までにしてください。`);
-          return;
+          return fail(
+            "recurrenceUntil",
+            `繰り返しの期限は開始日から最大${RECURRENCE_MAX_HORIZON_MONTHS}か月後までにしてください。`
+          );
         }
       }
 
@@ -193,15 +235,12 @@ export function ItemForm({
     // 実施作業
     const startAt = isAllDay ? combineDateAndTimeJst(startDateOnly, "00:00") : fromDatetimeLocalValue(startAtLocal);
     const dueAt = isAllDay ? combineDateAndTimeJst(dueDateOnly, "00:00") : fromDatetimeLocalValue(dueAtLocal);
+    const unit = isAllDay ? "日" : "日時";
 
-    if (!startAt || !dueAt) {
-      setError("開始日と期限日の両方を入力してください。");
-      return;
-    }
-
+    if (!startAt) return fail("startAt", `開始${unit}を入力してください。`);
+    if (!dueAt) return fail("dueAt", `期限${unit}を入力してください。`);
     if (new Date(dueAt).getTime() < new Date(startAt).getTime()) {
-      setError("期限は開始より後に設定してください。");
-      return;
+      return fail("dueAt", "期限は開始より後に設定してください。");
     }
 
     await onSubmit({
@@ -225,7 +264,8 @@ export function ItemForm({
         {(["todo", "event"] as ItemType[]).map((value) => (
           <label
             key={value}
-            className={`flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-lg border text-sm font-semibold ${
+            // ラジオボタン自体は見えないため、キーボードで選んでいるときはラベル側に枠線を出す
+            className={`flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-lg border text-sm font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue-600 ${
               type === value ? ITEM_TYPE_SELECTED_CLASS[value] : "border-gray-600 text-gray-300"
             }`}
           >
@@ -244,18 +284,224 @@ export function ItemForm({
 
       <div>
         <label htmlFor="title" className="mb-1 block text-sm font-medium text-gray-300">
-          タイトル
+          タイトル <RequiredMark />
         </label>
-        <input
-          id="title"
-          type="text"
-          required
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-        />
+        <input id="title" type="text" required value={title} onChange={(e) => setTitle(e.target.value)} {...fieldProps("title")} />
+        {errorFor("title")}
       </div>
 
+      <label className="flex min-h-10 items-center gap-2 text-sm font-medium text-gray-300">
+        <input
+          type="checkbox"
+          checked={isAllDay}
+          onChange={(e) => setIsAllDay(e.target.checked)}
+          className="size-5 rounded border-gray-600"
+        />
+        終日（時間を指定しない）
+      </label>
+
+      {type === "event" ? (
+        <>
+          <div>
+            <label htmlFor="eventDate" className="mb-1 block text-sm font-medium text-gray-300">
+              日付 <RequiredMark />
+            </label>
+            <input
+              id="eventDate"
+              type="date"
+              required
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+              onClick={openPicker}
+              {...fieldProps("eventDate")}
+            />
+            {errorFor("eventDate")}
+          </div>
+
+          {!isAllDay && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="startTime" className="mb-1 block text-sm font-medium text-gray-300">
+                  開始時間 <RequiredMark />
+                </label>
+                <input
+                  id="startTime"
+                  type="time"
+                  required
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  onClick={openPicker}
+                  {...fieldProps("startTime")}
+                />
+                {errorFor("startTime")}
+              </div>
+              <div>
+                <label htmlFor="endTime" className="mb-1 block text-sm font-medium text-gray-300">
+                  終了時間
+                </label>
+                <input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  onClick={openPicker}
+                  {...fieldProps("endTime")}
+                />
+                {errorFor("endTime")}
+              </div>
+            </div>
+          )}
+
+          {!initialItem && (
+            <div>
+              <label htmlFor="recurrenceFreq" className="mb-1 block text-sm font-medium text-gray-300">
+                繰り返し
+              </label>
+              <select
+                id="recurrenceFreq"
+                value={recurrenceFreq}
+                onChange={(e) => {
+                  const value = e.target.value as RecurrenceFreq | "none";
+                  setRecurrenceFreq(value);
+                  if (value !== "none" && !recurrenceUntil && eventDate) {
+                    setRecurrenceUntil(addMonthsToDateKey(eventDate, RECURRENCE_DEFAULT_UNTIL_MONTHS));
+                  }
+                }}
+                className={`${INPUT_CLASS} appearance-none border-gray-600`}
+              >
+                <option value="none">繰り返さない</option>
+                {RECURRENCE_OPTIONS.map((freq) => (
+                  <option key={freq} value={freq}>
+                    {RECURRENCE_FREQ_LABEL[freq]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {!initialItem && recurrenceFreq !== "none" && (
+            <div>
+              <label htmlFor="recurrenceUntil" className="mb-1 block text-sm font-medium text-gray-300">
+                繰り返しの期限（ここまで） <RequiredMark />
+              </label>
+              <input
+                id="recurrenceUntil"
+                type="date"
+                required
+                min={eventDate || undefined}
+                max={eventDate ? addMonthsToDateKey(eventDate, RECURRENCE_MAX_HORIZON_MONTHS) : undefined}
+                value={recurrenceUntil}
+                onChange={(e) => setRecurrenceUntil(e.target.value)}
+                onClick={openPicker}
+                {...fieldProps("recurrenceUntil")}
+              />
+              {errorFor("recurrenceUntil")}
+              <p className="mt-1 text-xs text-gray-400">
+                この日までの分をまとめて作成します（開始日から最大{RECURRENCE_MAX_HORIZON_MONTHS}か月後まで）。
+              </p>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="startAt" className="mb-1 block text-sm font-medium text-gray-300">
+              開始{isAllDay ? "日" : "日時"} <RequiredMark />
+            </label>
+            {isAllDay ? (
+              <input
+                id="startAt"
+                type="date"
+                required
+                value={startDateOnly}
+                onChange={(e) => setStartDateOnly(e.target.value)}
+                onClick={openPicker}
+                {...fieldProps("startAt")}
+              />
+            ) : (
+              <input
+                id="startAt"
+                type="datetime-local"
+                required
+                value={startAtLocal}
+                onChange={(e) => setStartAtLocal(e.target.value)}
+                onClick={openPicker}
+                {...fieldProps("startAt")}
+              />
+            )}
+            {errorFor("startAt")}
+          </div>
+          <div>
+            <label htmlFor="dueAt" className="mb-1 block text-sm font-medium text-gray-300">
+              期限{isAllDay ? "日" : "日時"} <RequiredMark />
+            </label>
+            {isAllDay ? (
+              <input
+                id="dueAt"
+                type="date"
+                required
+                value={dueDateOnly}
+                onChange={(e) => setDueDateOnly(e.target.value)}
+                onClick={openPicker}
+                {...fieldProps("dueAt")}
+              />
+            ) : (
+              <input
+                id="dueAt"
+                type="datetime-local"
+                required
+                value={dueAtLocal}
+                onChange={(e) => setDueAtLocal(e.target.value)}
+                onClick={openPicker}
+                {...fieldProps("dueAt")}
+              />
+            )}
+            {errorFor("dueAt")}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <label htmlFor="assignee" className="mb-1 block text-sm font-medium text-gray-300">
+          担当者
+        </label>
+        <select
+          id="assignee"
+          value={assigneeId}
+          onChange={(e) => {
+            assigneeTouchedRef.current = true;
+            setAssigneeId(e.target.value);
+          }}
+          className={`${INPUT_CLASS} appearance-none border-gray-600`}
+        >
+          <option value="">担当なし</option>
+          {members.map((member) => (
+            <option key={member.profile_id} value={member.profile_id}>
+              {member.profile.display_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {initialItem && (
+        <div>
+          <label htmlFor="status" className="mb-1 block text-sm font-medium text-gray-300">
+            状況
+          </label>
+          <select
+            id="status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as ItemStatus)}
+            className={`${INPUT_CLASS} appearance-none border-gray-600`}
+          >
+            <option value="not_started">未対応</option>
+            <option value="in_progress">対応中</option>
+            <option value="done">完了</option>
+          </select>
+        </div>
+      )}
+
+      {/* 詳細は任意のため、必須の日時・担当者より後ろに置く（スマホで必須欄が画面の下に押しやられないように） */}
       <div>
         <label htmlFor="description" className="mb-1 block text-sm font-medium text-gray-300">
           詳細
@@ -290,7 +536,7 @@ export function ItemForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           onKeyDown={handleDescriptionKeyDown}
-          className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
+          className={`${INPUT_CLASS} border-gray-600`}
         />
         {description.trim() && (
           <div className="mt-2 flex flex-col gap-1 rounded-lg border border-gray-700 bg-gray-700 p-3">
@@ -304,9 +550,9 @@ export function ItemForm({
                       type="checkbox"
                       checked={parsed.checked}
                       onChange={() => setDescription((prev) => toggleTaskLine(prev, index))}
-                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-600"
+                      className="mt-0.5 size-4 shrink-0 rounded border-gray-600"
                     />
-                    <span className={parsed.checked ? "text-gray-500 line-through" : "text-gray-300"}>
+                    <span className={parsed.checked ? "text-gray-400 line-through" : "text-gray-300"}>
                       {parsed.text}
                     </span>
                   </label>
@@ -343,214 +589,9 @@ export function ItemForm({
         )}
       </div>
 
-      <label className="flex min-h-10 items-center gap-2 text-sm font-medium text-gray-300">
-        <input
-          type="checkbox"
-          checked={isAllDay}
-          onChange={(e) => setIsAllDay(e.target.checked)}
-          className="h-5 w-5 rounded border-gray-600"
-        />
-        終日（時間を指定しない）
-      </label>
-
-      {type === "event" ? (
-        <>
-          <div>
-            <label htmlFor="eventDate" className="mb-1 block text-sm font-medium text-gray-300">
-              日付
-            </label>
-            <input
-              id="eventDate"
-              type="date"
-              required
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-              onClick={openPicker}
-              className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-            />
-          </div>
-
-          {!isAllDay && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="startTime" className="mb-1 block text-sm font-medium text-gray-300">
-                  開始時間
-                </label>
-                <input
-                  id="startTime"
-                  type="time"
-                  required
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  onClick={openPicker}
-                  className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label htmlFor="endTime" className="mb-1 block text-sm font-medium text-gray-300">
-                  終了時間
-                </label>
-                <input
-                  id="endTime"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  onClick={openPicker}
-                  className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-                />
-              </div>
-            </div>
-          )}
-
-          {!initialItem && (
-            <div>
-              <label htmlFor="recurrenceFreq" className="mb-1 block text-sm font-medium text-gray-300">
-                繰り返し
-              </label>
-              <select
-                id="recurrenceFreq"
-                value={recurrenceFreq}
-                onChange={(e) => {
-                  const value = e.target.value as RecurrenceFreq | "none";
-                  setRecurrenceFreq(value);
-                  if (value !== "none" && !recurrenceUntil && eventDate) {
-                    setRecurrenceUntil(addMonthsToDateKey(eventDate, RECURRENCE_DEFAULT_UNTIL_MONTHS));
-                  }
-                }}
-                className="w-full appearance-none rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-              >
-                <option value="none">繰り返さない</option>
-                {RECURRENCE_OPTIONS.map((freq) => (
-                  <option key={freq} value={freq}>
-                    {RECURRENCE_FREQ_LABEL[freq]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {!initialItem && recurrenceFreq !== "none" && (
-            <div>
-              <label htmlFor="recurrenceUntil" className="mb-1 block text-sm font-medium text-gray-300">
-                繰り返しの期限（ここまで） <span className="text-red-400">*</span>
-              </label>
-              <input
-                id="recurrenceUntil"
-                type="date"
-                required
-                min={eventDate || undefined}
-                max={eventDate ? addMonthsToDateKey(eventDate, RECURRENCE_MAX_HORIZON_MONTHS) : undefined}
-                value={recurrenceUntil}
-                onChange={(e) => setRecurrenceUntil(e.target.value)}
-                onClick={openPicker}
-                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                この日までの分をまとめて作成します（開始日から最大{RECURRENCE_MAX_HORIZON_MONTHS}か月後まで）。
-              </p>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="startAt" className="mb-1 block text-sm font-medium text-gray-300">
-              開始{isAllDay ? "日" : "日時"} <span className="text-red-400">*</span>
-            </label>
-            {isAllDay ? (
-              <input
-                id="startAt"
-                type="date"
-                required
-                value={startDateOnly}
-                onChange={(e) => setStartDateOnly(e.target.value)}
-                onClick={openPicker}
-                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-              />
-            ) : (
-              <input
-                id="startAt"
-                type="datetime-local"
-                required
-                value={startAtLocal}
-                onChange={(e) => setStartAtLocal(e.target.value)}
-                onClick={openPicker}
-                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-              />
-            )}
-          </div>
-          <div>
-            <label htmlFor="dueAt" className="mb-1 block text-sm font-medium text-gray-300">
-              期限{isAllDay ? "日" : "日時"} <span className="text-red-400">*</span>
-            </label>
-            {isAllDay ? (
-              <input
-                id="dueAt"
-                type="date"
-                required
-                value={dueDateOnly}
-                onChange={(e) => setDueDateOnly(e.target.value)}
-                onClick={openPicker}
-                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-              />
-            ) : (
-              <input
-                id="dueAt"
-                type="datetime-local"
-                required
-                value={dueAtLocal}
-                onChange={(e) => setDueAtLocal(e.target.value)}
-                onClick={openPicker}
-                className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-              />
-            )}
-          </div>
-        </div>
-      )}
-
-      <div>
-        <label htmlFor="assignee" className="mb-1 block text-sm font-medium text-gray-300">
-          担当者
-        </label>
-        <select
-          id="assignee"
-          value={assigneeId}
-          onChange={(e) => {
-            assigneeTouchedRef.current = true;
-            setAssigneeId(e.target.value);
-          }}
-          className="w-full appearance-none rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-        >
-          <option value="">未割り当て</option>
-          {members.map((member) => (
-            <option key={member.profile_id} value={member.profile_id}>
-              {member.profile.display_name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {initialItem && (
-        <div>
-          <label htmlFor="status" className="mb-1 block text-sm font-medium text-gray-300">
-            ステータス
-          </label>
-          <select
-            id="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as ItemStatus)}
-            className="w-full appearance-none rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 text-base text-gray-100 focus:border-blue-500"
-          >
-            <option value="not_started">未対応</option>
-            <option value="in_progress">対応中</option>
-            <option value="done">完了</option>
-          </select>
-        </div>
-      )}
-
-      {error && (
+      {submitError && (
         <p role="alert" className="text-sm text-red-400">
-          {error}
+          {submitError}
         </p>
       )}
 

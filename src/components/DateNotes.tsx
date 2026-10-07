@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { fetchMyPrivateNote, fetchSharedNote } from "@/lib/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { MemberWithProfile } from "@/lib/families";
-import type { Note, NoteVisibility } from "@/types/database";
+import { NOTE_ACCENT, type Note, type NoteVisibility } from "@/types/database";
 
 function noteHref(dateKey: string, visibility: NoteVisibility): string {
   return `/notes?${new URLSearchParams({ date: dateKey, visibility }).toString()}`;
@@ -23,8 +23,8 @@ function NoteRow({
   content: string | null | undefined;
 }) {
   return (
-    <Link href={href} className="block rounded-lg bg-gray-700 p-2 active:bg-gray-700">
-      <p className="mb-0.5 text-xs font-semibold text-gray-500">{label}</p>
+    <Link href={href} className="block rounded-lg bg-gray-700 p-2 active:bg-gray-600">
+      <p className="mb-0.5 text-xs font-semibold text-gray-300">{label}</p>
       <p className="truncate text-sm font-semibold text-gray-100">{title?.trim() ? title : "未タイトル"}</p>
       <p className="truncate text-xs text-gray-400">{content?.trim() ? content : "まだ書かれていません"}</p>
     </Link>
@@ -64,7 +64,7 @@ export function DateNotes({
         setSharedNote(shared);
         setMyPrivateNote(mine);
       })
-      .catch(() => setError("メモの取得に失敗しました。"));
+      .catch(() => setError("メモの取得に失敗しました。日付を選び直すか、画面を再読み込みしてください。"));
   }, [supabase, groupId, userId, dateKey, refreshToken]);
 
   function memberNameOf(profileId: string | null) {
@@ -72,11 +72,17 @@ export function DateNotes({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border-y border-r border-gray-700 border-l-4 border-l-blue-500 p-3">
+    <div className={`flex flex-col gap-2 rounded-lg border-y border-r border-gray-700 border-l-4 ${NOTE_ACCENT.border} p-3`}>
       <h3 className="text-sm font-bold text-gray-400">メモ・日記</h3>
 
-      {sharedNote === undefined || myPrivateNote === undefined ? (
-        <p className="text-xs text-gray-500">読み込み中...</p>
+      {error ? (
+        <p role="alert" className="text-xs text-red-400">
+          {error}
+        </p>
+      ) : sharedNote === undefined || myPrivateNote === undefined ? (
+        <p role="status" className="text-xs text-gray-400">
+          読み込み中...
+        </p>
       ) : (
         <>
           <NoteRow
@@ -88,8 +94,6 @@ export function DateNotes({
           <NoteRow href={noteHref(dateKey, "private")} label="自分だけ" title={myPrivateNote?.title} content={myPrivateNote?.content} />
         </>
       )}
-
-      {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   );
 }

@@ -20,6 +20,10 @@ export const ITEM_TYPE_ACCENT: Record<ItemType, { border: string; dot: string }>
   todo: { border: "border-l-amber-400", dot: "bg-amber-400" },
 };
 
+// メモ・日記の色。青は「選択中・今日・主なボタン」に使っているため、紛れないよう紫にする
+// （中間色の400は、白ベースの反転対象外でもどちらの背景でも見える）
+export const NOTE_ACCENT = { mark: "bg-violet-400", border: "border-l-violet-400" };
+
 export type Profile = {
   id: string;
   display_name: string;

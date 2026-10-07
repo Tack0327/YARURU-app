@@ -6,8 +6,8 @@ import { useAuth } from "./AuthProvider";
 
 const NAV_ITEMS = [
   { href: "/home", label: "ホーム" },
-  { href: "/items", label: "チケット一覧" },
-  { href: "/history", label: "履歴" },
+  { href: "/items", label: "一覧" },
+  { href: "/history", label: "完了履歴" },
   { href: "/settings", label: "設定" },
 ];
 
@@ -23,7 +23,7 @@ export function NavBar() {
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-700 bg-gray-800 pb-[env(safe-area-inset-bottom)]">
       <ul className="mx-auto flex max-w-2xl">
         {items.map((item) => {
-          // チケットの詳細・新規登録（/items/...）はホームからも開くため、チケット一覧を経由したように見えないよう一覧のときだけ光らせる
+          // 予定・作業の詳細・追加（/items/...）はホームからも開くため、一覧を経由したように見えないよう一覧のときだけ光らせる
           const isActive =
             item.href === "/items" ? pathname === "/items" : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (

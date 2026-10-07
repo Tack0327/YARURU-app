@@ -55,7 +55,7 @@ export function FilterBar({
           value={filters.status ?? ""}
           onChange={(e) => onChange({ ...filters, status: (e.target.value || undefined) as ItemFilters["status"] })}
           className="appearance-none rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
-          aria-label="ステータスで絞り込み"
+          aria-label="状況で絞り込み"
         >
           <option value="">状況: すべて</option>
           <option value="not_started">未対応</option>

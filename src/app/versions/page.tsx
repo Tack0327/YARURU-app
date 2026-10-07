@@ -12,7 +12,7 @@ function VersionsContent() {
           <li key={entry.version} className="rounded-lg border border-gray-700 px-4 py-3">
             <div className="flex items-baseline gap-3">
               <span className="text-sm font-bold text-gray-100">v{entry.version}</span>
-              <span className="text-xs text-gray-500">{entry.date}</span>
+              <span className="text-xs text-gray-400">{entry.date}</span>
             </div>
             <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-gray-300">
               {entry.changes.map((change) => (

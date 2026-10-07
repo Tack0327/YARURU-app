@@ -93,11 +93,11 @@ export function parseCsvEmailRequest(
     itemIds.length > CSV_EXPORT_MAX_ITEMS ||
     !itemIds.every((id) => typeof id === "string" && id.length > 0)
   ) {
-    return { ok: false, error: `チケットを1〜${CSV_EXPORT_MAX_ITEMS}件選択してください。` };
+    return { ok: false, error: `予定・作業を1〜${CSV_EXPORT_MAX_ITEMS}件選択してください。` };
   }
   // UUIDでない値はDBで型変換エラーになり「時間をおいて再度お試しください」と誤解させてしまうため、ここで入力の誤りとして返す
   if (!itemIds.every((id) => UUID_PATTERN.test(id))) {
-    return { ok: false, error: "選択したチケットの情報が正しくありません。画面を再読み込みしてから再度お試しください。" };
+    return { ok: false, error: "選択した予定・作業の情報が正しくありません。画面を再読み込みしてから再度お試しください。" };
   }
   if (purpose !== "jira" && purpose !== "excel") {
     return { ok: false, error: "CSVの用途（Jira取り込み用／Excel閲覧用）を選択してください。" };

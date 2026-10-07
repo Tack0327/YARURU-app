@@ -6,6 +6,8 @@ import { useAuth } from "@/components/AuthProvider";
 import { LoadError } from "@/components/LoadError";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { formatLongDateKey } from "@/lib/dateUtils";
 import { deleteNote, fetchMyPrivateNote, fetchSharedNote, upsertMyPrivateNote, upsertSharedNote } from "@/lib/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { Note, NoteVisibility } from "@/types/database";
@@ -32,6 +34,7 @@ function NoteEditContent() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const deleteDialog = useConfirmDialog(confirmingDelete, () => setConfirmingDelete(false), saving);
 
   const load = useCallback(async () => {
     if (!user || !dateKey) return;
@@ -117,16 +120,20 @@ function NoteEditContent() {
   }
 
   if (note === undefined) {
-    return <p className="text-gray-400">読み込み中...</p>;
+    return (
+      <p role="status" className="text-gray-400">
+        読み込み中...
+      </p>
+    );
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-xl font-bold text-gray-100">
-        {dateKey}のメモ・日記（{VISIBILITY_LABEL[visibility]}）
+      <h1 className="text-xl font-bold text-balance text-gray-100">
+        {formatLongDateKey(dateKey)}のメモ・日記（{VISIBILITY_LABEL[visibility]}）
       </h1>
       {visibility === "shared" && (
-        <p className="text-xs text-gray-500">グループのメンバーなら誰でも閲覧・編集できます。</p>
+        <p className="text-xs text-gray-400">グループのメンバーなら誰でも閲覧・編集できます。</p>
       )}
 
       <div>
@@ -154,7 +161,11 @@ function NoteEditContent() {
         />
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-red-400">
+          {error}
+        </p>
+      )}
 
       <div className="flex gap-3">
         <button
@@ -177,10 +188,13 @@ function NoteEditContent() {
       {note && (
         <div className="rounded-lg border border-red-300 p-4">
           {confirmingDelete ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-sm font-semibold text-red-300">このメモを削除しますか？この操作は取り消せません。</p>
+            <div {...deleteDialog.dialogProps} className="flex flex-col gap-3">
+              <p id={deleteDialog.messageId} className="text-sm font-semibold text-red-300">
+                このメモを削除しますか？この操作は取り消せません。
+              </p>
               <div className="flex gap-2">
                 <button
+                  {...deleteDialog.cancelProps}
                   type="button"
                   onClick={() => setConfirmingDelete(false)}
                   disabled={saving}
@@ -200,6 +214,7 @@ function NoteEditContent() {
             </div>
           ) : (
             <button
+              {...deleteDialog.triggerProps}
               type="button"
               onClick={() => setConfirmingDelete(true)}
               className="min-h-12 w-full text-base font-semibold text-red-400"
@@ -216,7 +231,13 @@ function NoteEditContent() {
 export default function NotePage() {
   return (
     <RequireAuth requireGroup showNav>
-      <Suspense fallback={<p className="text-gray-400">読み込み中...</p>}>
+      <Suspense
+        fallback={
+          <p role="status" className="text-gray-400">
+            読み込み中...
+          </p>
+        }
+      >
         <NoteEditContent />
       </Suspense>
     </RequireAuth>

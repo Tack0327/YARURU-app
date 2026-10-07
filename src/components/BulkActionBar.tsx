@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { CSV_PURPOSE_LABEL, type CsvPurpose } from "@/lib/csvExport";
 import type { MemberWithProfile } from "@/lib/families";
 
@@ -30,7 +31,7 @@ function BulkDateInput({ label, value, onChange }: { label: string; value: strin
           ✕
         </button>
       ) : (
-        <span className="shrink-0 pr-2 text-xs text-gray-500">変更しない</span>
+        <span className="shrink-0 pr-2 text-xs text-gray-400">変更しない</span>
       )}
     </div>
   );
@@ -46,6 +47,7 @@ export function BulkActionBar({
   submitting,
   deleting,
   exporting,
+  error,
   allowAssigneeChange = true,
   onAssigneeChange,
   onStatusChange,
@@ -68,7 +70,9 @@ export function BulkActionBar({
   submitting: boolean;
   deleting: boolean;
   exporting: boolean;
-  /** falseの場合、担当者の一括変更を無効にする（複数の家族グループを横断表示している場合など） */
+  /** まとめて変更・削除できなかった理由（バーの中に表示する） */
+  error?: string | null;
+  /** falseの場合、担当者の一括変更を無効にする（複数のグループを横断表示している場合など） */
   allowAssigneeChange?: boolean;
   onAssigneeChange: (value: string) => void;
   onStatusChange: (value: string) => void;
@@ -85,6 +89,8 @@ export function BulkActionBar({
   const [choosingExport, setChoosingExport] = useState(false);
   const [csvPurpose, setCsvPurpose] = useState<CsvPurpose>("jira");
   const [editorOpen, setEditorOpen] = useState(false);
+  const deleteDialog = useConfirmDialog(confirmingDelete, () => setConfirmingDelete(false), deleting);
+  const exportDialog = useConfirmDialog(choosingExport, () => setChoosingExport(false), exporting);
 
   async function handleConfirmDelete() {
     await onDelete();
@@ -103,8 +109,10 @@ export function BulkActionBar({
   if (choosingExport) {
     return (
       <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-blue-800 bg-blue-950">
-        <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3">
-          <p className="text-sm font-semibold text-blue-200">選択した{selectedCount}件をCSVで出力します</p>
+        <div {...exportDialog.dialogProps} className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3">
+          <p id={exportDialog.messageId} className="text-sm font-semibold text-blue-200">
+            選択した{selectedCount}件をCSVで出力します
+          </p>
           <div role="radiogroup" aria-label="CSVの用途" className="grid grid-cols-2 gap-2">
             {(["jira", "excel"] as CsvPurpose[]).map((purpose) => (
               <button
@@ -129,6 +137,7 @@ export function BulkActionBar({
           </p>
           <div className="grid grid-cols-3 gap-2 sm:flex sm:justify-end">
             <button
+              {...exportDialog.cancelProps}
               type="button"
               onClick={() => setChoosingExport(false)}
               disabled={exporting}
@@ -161,12 +170,16 @@ export function BulkActionBar({
   if (confirmingDelete) {
     return (
       <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-red-800 bg-red-950">
-        <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
-          <p className="flex-1 text-sm font-semibold text-red-200">
+        <div
+          {...deleteDialog.dialogProps}
+          className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center"
+        >
+          <p id={deleteDialog.messageId} className="flex-1 text-sm font-semibold text-pretty text-red-200">
             選択した{selectedCount}件を削除しますか？この操作は取り消せません。
           </p>
           <div className="flex gap-2">
             <button
+              {...deleteDialog.cancelProps}
               type="button"
               onClick={() => setConfirmingDelete(false)}
               disabled={deleting}
@@ -190,14 +203,21 @@ export function BulkActionBar({
 
   const csvButtonClassName =
     "min-h-10 whitespace-nowrap rounded-lg border border-gray-600 px-4 text-sm font-semibold text-gray-300 disabled:opacity-50";
-
   // スマホでは変更欄（担当者・状況・日付）が画面の大半を覆ってしまうため、「まとめて変更」を押すまで折りたたむ。
   // 横幅に余裕のあるsm以上の画面では、これまでどおり常に表示する。
   return (
     <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-blue-800 bg-blue-950">
-      <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
+      <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center">
+        {error && (
+          <p role="alert" className="text-sm font-semibold text-red-300 sm:basis-full">
+            {error}
+          </p>
+        )}
         <div className="flex items-center justify-between sm:shrink-0">
-          <p className="whitespace-nowrap text-sm font-semibold text-blue-200">{selectedCount}件選択中</p>
+          {/* チェックを入れるたびに件数が読み上げられるようにする */}
+          <p aria-live="polite" className="whitespace-nowrap text-sm font-semibold text-blue-200 tabular-nums">
+            {selectedCount}件選択中
+          </p>
           {editorOpen && (
             <button type="button" onClick={() => setEditorOpen(false)} className="text-xs font-semibold text-blue-300 sm:hidden">
               変更欄を閉じる
@@ -206,6 +226,8 @@ export function BulkActionBar({
         </div>
         <div className={`${editorOpen ? "grid" : "hidden"} grid-cols-2 gap-2 sm:flex sm:flex-1`}>
           <button
+            // CSV出力ボタンは画面幅によって2つのうち片方だけを表示している。閉じたときは見えている方にフォーカスが戻る
+            {...exportDialog.triggerProps}
             type="button"
             onClick={() => setChoosingExport(true)}
             disabled={submitting || deleting}
@@ -213,7 +235,7 @@ export function BulkActionBar({
           >
             CSV出力
           </button>
-          {/* 複数の家族を横断表示している間は担当者を一括変更できないため、選択欄自体を出さない */}
+          {/* 複数のグループを横断表示している間は担当者を一括変更できないため、選択欄自体を出さない */}
           {allowAssigneeChange && (
             <select
               value={assigneeId}
@@ -222,7 +244,7 @@ export function BulkActionBar({
               aria-label="担当者をまとめて変更"
             >
               <option value="">担当者: 変更しない</option>
-              <option value={BULK_UNASSIGN_VALUE}>担当者なしにする</option>
+              <option value={BULK_UNASSIGN_VALUE}>担当なしにする</option>
               {members.map((member) => (
                 <option key={member.profile_id} value={member.profile_id}>
                   {member.profile.display_name}
@@ -234,7 +256,7 @@ export function BulkActionBar({
             value={status}
             onChange={(e) => onStatusChange(e.target.value)}
             className="appearance-none rounded-lg border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-gray-100"
-            aria-label="ステータスをまとめて変更"
+            aria-label="状況をまとめて変更"
           >
             <option value="">状況: 変更しない</option>
             <option value="not_started">未対応</option>
@@ -247,6 +269,7 @@ export function BulkActionBar({
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
           <button
+            {...exportDialog.triggerProps}
             type="button"
             onClick={() => setChoosingExport(true)}
             disabled={submitting || deleting}
@@ -262,6 +285,7 @@ export function BulkActionBar({
             選択解除
           </button>
           <button
+            {...deleteDialog.triggerProps}
             type="button"
             onClick={() => setConfirmingDelete(true)}
             disabled={submitting || deleting}

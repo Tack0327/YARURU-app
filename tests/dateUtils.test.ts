@@ -3,6 +3,8 @@ import {
   addMonthsToDateKey,
   combineDateAndTimeJst,
   formatDateTimeJst,
+  formatLongDateKey,
+  formatShortDateKey,
   fromDatetimeLocalValue,
   generateRecurrenceDateKeys,
   isActiveOnDate,
@@ -206,6 +208,23 @@ describe("dateUtils", () => {
       expect(keys[keys.length - 1]).toBe("2028-01-01");
       expect(keys).toHaveLength(25);
     });
+  });
+});
+
+describe("formatShortDateKey / formatLongDateKey", () => {
+  it("formats a date key with the Japanese weekday", () => {
+    expect(formatShortDateKey("2026-10-07")).toBe("10/7（水）");
+    expect(formatLongDateKey("2026-10-07")).toBe("10月7日（水）");
+  });
+
+  it("handles month boundaries and Sundays", () => {
+    expect(formatShortDateKey("2026-01-04")).toBe("1/4（日）");
+    expect(formatLongDateKey("2028-02-29")).toBe("2月29日（火）");
+  });
+
+  it("returns an empty string for an empty key", () => {
+    expect(formatShortDateKey("")).toBe("");
+    expect(formatLongDateKey("")).toBe("");
   });
 });
 

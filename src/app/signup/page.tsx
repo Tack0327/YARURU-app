@@ -71,7 +71,7 @@ export default function SignupPage() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-8 text-center text-2xl font-bold text-gray-100">新規登録</h1>
+        <h1 className="mb-8 text-center text-2xl font-bold text-gray-100">アカウント作成</h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <div>
             <label htmlFor="displayName" className="mb-1 block text-sm font-medium text-gray-300">
@@ -122,7 +122,7 @@ export default function SignupPage() {
             disabled={submitting}
             className="min-h-12 rounded-lg bg-blue-600 text-base font-semibold text-white disabled:opacity-50"
           >
-            {submitting ? "登録中..." : "登録する"}
+            {submitting ? "作成中..." : "アカウントを作成する"}
           </button>
         </form>
         <p className="mt-6 text-center text-sm text-gray-300">

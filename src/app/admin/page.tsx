@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { deleteAccountWithTransfers, fetchAllAccounts, fetchAllGroups, fetchGroupOwners, fetchGroupStats } from "@/lib/admin";
 import { toErrorMessage } from "@/lib/errors";
 import { deleteFamilyGroup, fetchGroupMembersForGroups, type MemberWithProfile } from "@/lib/families";
@@ -41,6 +42,18 @@ function AdminContent() {
   const [accountSearch, setAccountSearch] = useState("");
   const [visibleGroupCount, setVisibleGroupCount] = useState(PAGE_SIZE);
   const [visibleAccountCount, setVisibleAccountCount] = useState(PAGE_SIZE);
+  // 確認欄を閉じたときにフォーカスを戻す「削除」ボタン（行ごとに並ぶため、最後に押した行を覚えておく）
+  const [lastDeleteGroupId, setLastDeleteGroupId] = useState<string | null>(null);
+  const [lastDeleteAccountId, setLastDeleteAccountId] = useState<string | null>(null);
+  const groupDeleteDialog = useConfirmDialog(
+    confirmingDeleteGroupId !== null,
+    () => {
+      setConfirmingDeleteGroupId(null);
+      setGroupStats(null);
+    },
+    deletingGroupId !== null
+  );
+  const accountDeleteDialog = useConfirmDialog(deleteFlow !== null, () => setDeleteFlow(null), deletingId !== null);
 
   const filteredGroups = (groups ?? []).filter((g) => {
     const q = groupSearch.trim().toLowerCase();
@@ -103,8 +116,9 @@ function AdminContent() {
     router.push("/home");
   }
 
-  // 削除ボタン押下時、メンバー数・チケット数を確認画面で警告として見せてから、本当に削除するかを判断してもらう
+  // 削除ボタン押下時、メンバー数・予定・作業の件数を確認画面で警告として見せてから、本当に削除するかを判断してもらう
   async function handleStartDeleteGroup(group: FamilyGroup) {
+    setLastDeleteGroupId(group.id);
     setPreparingGroupDeleteId(group.id);
     try {
       const stats = await fetchGroupStats(supabase, group.id);
@@ -135,6 +149,7 @@ function AdminContent() {
   // 削除ボタン押下時、このアカウントが管理者になっているグループを調べ、
   // ひとりだけのグループは削除警告、他にメンバーがいるグループは委譲先の選択を確認画面に出す
   async function handleStartDeleteAccount(account: AdminAccount) {
+    setLastDeleteAccountId(account.id);
     setPreparingDeleteId(account.id);
     try {
       const ownedGroupIds = (groups ?? []).filter((g) => groupOwners.get(g.id) === account.id).map((g) => g.id);
@@ -212,11 +227,12 @@ function AdminContent() {
       <section>
         <h2 className="mb-2 text-sm font-bold text-gray-400">全てのグループ（{filteredGroups.length}件）</h2>
         {!groups ? (
-          <p className="text-sm text-gray-500">読み込み中...</p>
+          <p className="text-sm text-gray-400">読み込み中...</p>
         ) : (
           <>
             <input
-              type="text"
+              type="search"
+              aria-label="グループ名・招待コードで検索"
               value={groupSearch}
               onChange={(e) => {
                 setGroupSearch(e.target.value);
@@ -229,17 +245,18 @@ function AdminContent() {
               {filteredGroups.slice(0, visibleGroupCount).map((g) => (
               <li key={g.id} className="rounded-lg border border-gray-700 px-4 py-3">
                 {confirmingDeleteGroupId === g.id ? (
-                  <div className="flex flex-col gap-2">
-                    <p className="text-sm font-semibold text-red-300">
+                  <div {...groupDeleteDialog.dialogProps} className="flex flex-col gap-2">
+                    <p id={groupDeleteDialog.messageId} className="text-sm font-semibold text-pretty text-red-300">
                       「{g.name}」を削除しますか？このグループの予定・実施作業とメンバー情報がすべて削除され、取り消せません。
                     </p>
                     {groupStats?.id === g.id && (
                       <p className="text-sm font-semibold text-red-300">
-                        メンバー{groupStats.memberCount}人、チケット{groupStats.itemCount}件が削除されます。
+                        メンバー{groupStats.memberCount}人、予定・作業{groupStats.itemCount}件が削除されます。
                       </p>
                     )}
                     <div className="flex gap-2">
                       <button
+                        {...groupDeleteDialog.cancelProps}
                         type="button"
                         onClick={() => {
                           setConfirmingDeleteGroupId(null);
@@ -263,32 +280,37 @@ function AdminContent() {
                 ) : (
                   <div className="flex flex-col gap-2">
                     {groupDeleteError?.id === g.id && (
-                      <p className="text-xs font-semibold text-red-400">{groupDeleteError.message}</p>
+                      <p role="alert" className="text-xs font-semibold text-red-400">
+                        {groupDeleteError.message}
+                      </p>
                     )}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-100">{g.name}</p>
-                        <p className="font-mono text-xs text-gray-500">{g.invite_code}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-100">{g.name}</p>
+                        <p className="font-mono text-xs text-gray-400">{g.invite_code}</p>
                         {(() => {
                           const owner = accountsById.get(groupOwners.get(g.id) ?? "");
                           return (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-400">
                               管理者: {owner ? `${owner.display_name}（${owner.email}）` : "不明"}
                             </p>
                           );
                         })()}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex shrink-0 gap-2">
                         <button
                           type="button"
                           onClick={() => handleViewGroup(g)}
+                          aria-label={`グループ「${g.name}」を操作する`}
                           className="min-h-9 rounded-lg border border-gray-600 px-3 text-xs font-semibold text-gray-300"
                         >
                           このグループを操作する
                         </button>
                         <button
+                          {...(g.id === lastDeleteGroupId ? groupDeleteDialog.triggerProps : {})}
                           type="button"
                           onClick={() => handleStartDeleteGroup(g)}
+                          aria-label={`グループ「${g.name}」を削除`}
                           disabled={preparingGroupDeleteId === g.id}
                           className="min-h-9 rounded-lg border border-red-300 px-3 text-xs font-semibold text-red-400 disabled:opacity-50"
                         >
@@ -317,11 +339,12 @@ function AdminContent() {
       <section>
         <h2 className="mb-2 text-sm font-bold text-gray-400">全てのアカウント（{filteredAccounts.length}件）</h2>
         {!accounts ? (
-          <p className="text-sm text-gray-500">読み込み中...</p>
+          <p className="text-sm text-gray-400">読み込み中...</p>
         ) : (
           <>
             <input
-              type="text"
+              type="search"
+              aria-label="表示名・メールアドレスで検索"
               value={accountSearch}
               onChange={(e) => {
                 setAccountSearch(e.target.value);
@@ -334,8 +357,8 @@ function AdminContent() {
               {filteredAccounts.slice(0, visibleAccountCount).map((account) => (
               <li key={account.id} className="rounded-lg border border-gray-700 px-4 py-3">
                 {deleteFlow?.account.id === account.id ? (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-sm font-semibold text-red-300">
+                  <div {...accountDeleteDialog.dialogProps} className="flex flex-col gap-3">
+                    <p id={accountDeleteDialog.messageId} className="text-sm font-semibold text-pretty text-red-300">
                       {account.display_name}（{account.email}）のアカウントを削除しますか？この操作は取り消せません。
                     </p>
                     {deleteFlow.soloGroups.length > 0 && (
@@ -350,6 +373,7 @@ function AdminContent() {
                           「{group.name}」の新しい管理者を選択してください
                         </p>
                         <select
+                          aria-label={`「${group.name}」の新しい管理者`}
                           value={deleteFlow.selectedNewOwner[group.id] ?? ""}
                           onChange={(e) => {
                             const value = e.target.value;
@@ -370,6 +394,7 @@ function AdminContent() {
                     ))}
                     <div className="flex gap-2">
                       <button
+                        {...accountDeleteDialog.cancelProps}
                         type="button"
                         onClick={() => setDeleteFlow(null)}
                         disabled={deletingId === account.id}
@@ -391,17 +416,19 @@ function AdminContent() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-gray-100">
                         {account.display_name}
-                        {account.id === user?.id && <span className="ml-1 text-xs text-gray-500">(自分)</span>}
+                        {account.id === user?.id && <span className="ml-1 text-xs text-gray-400">(自分)</span>}
                       </p>
-                      <p className="text-xs text-gray-500">{account.email}</p>
+                      <p className="truncate text-xs text-gray-400">{account.email}</p>
                     </div>
                     <button
+                      {...(account.id === lastDeleteAccountId ? accountDeleteDialog.triggerProps : {})}
                       type="button"
                       onClick={() => handleStartDeleteAccount(account)}
+                      aria-label={`${account.display_name}（${account.email}）のアカウントを削除`}
                       disabled={preparingDeleteId === account.id}
                       className="min-h-9 rounded-lg border border-red-300 px-3 text-xs font-semibold text-red-400 disabled:opacity-50"
                     >

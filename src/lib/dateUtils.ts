@@ -61,6 +61,27 @@ export function timeOfDayJst(iso: string | null): string {
   return toDatetimeLocalValue(iso).slice(11);
 }
 
+const WEEKDAY_JA = ["日", "月", "火", "水", "木", "金", "土"];
+
+function weekdayOfDateKey(dateKey: string): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return WEEKDAY_JA[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
+}
+
+/** 日付キー「YYYY-MM-DD」を「10/7（水）」の形にする（カードなど狭い場所での日付表示用） */
+export function formatShortDateKey(dateKey: string): string {
+  if (!dateKey) return "";
+  const [, month, day] = dateKey.split("-").map(Number);
+  return `${month}/${day}（${weekdayOfDateKey(dateKey)}）`;
+}
+
+/** 日付キー「YYYY-MM-DD」を「10月7日（水）」の形にする（見出し用） */
+export function formatLongDateKey(dateKey: string): string {
+  if (!dateKey) return "";
+  const [, month, day] = dateKey.split("-").map(Number);
+  return `${month}月${day}日（${weekdayOfDateKey(dateKey)}）`;
+}
+
 /** 日付キー「YYYY-MM-DD」と時刻「HH:mm」（ともにAsia/Tokyo基準）を結合してISO文字列(UTC)に変換する */
 export function combineDateAndTimeJst(dateKey: string, time: string): string | null {
   if (!dateKey) return null;

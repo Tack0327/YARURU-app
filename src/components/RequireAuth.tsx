@@ -7,7 +7,11 @@ import { useAuth } from "./AuthProvider";
 import { NavBar } from "./NavBar";
 
 function LoadingScreen() {
-  return <div className="flex min-h-dvh items-center justify-center text-gray-400">読み込み中...</div>;
+  return (
+    <div role="status" className="flex min-h-dvh items-center justify-center text-gray-400">
+      読み込み中...
+    </div>
+  );
 }
 
 function GroupsErrorScreen({ message }: { message: string }) {
@@ -51,14 +55,16 @@ function TopBar() {
     <>
       {isAdminViewing && (
         <div className="flex items-center justify-between gap-2 bg-amber-900 px-4 py-1.5 text-xs font-semibold text-amber-200">
-          <span>🛡️ 管理者として「{group?.group.name}」を閲覧中</span>
+          <span className="min-w-0 truncate">
+            <span aria-hidden="true">🛡️ </span>管理者として「{group?.group.name}」を閲覧中
+          </span>
           <button
             type="button"
             onClick={() => {
               exitAdminView();
               router.replace("/home");
             }}
-            className="underline"
+            className="shrink-0 underline"
           >
             終了する
           </button>
@@ -67,21 +73,23 @@ function TopBar() {
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-gray-700 bg-gray-800 px-4 py-2">
         <Link
           href="/versions"
-          aria-label="Version historyを開く"
+          // 音声操作で見えている文字（v1.2.3）を言っても押せるよう、名前の先頭を表示と同じにする
+          aria-label={`v${process.env.NEXT_PUBLIC_APP_VERSION}（Version history）`}
           // gray-500は明るい背景用の色の反転対象外で、薄暗い背景だと見えにくいため、反転されるgray-300を使う
-          className="rounded-md px-1 text-xs font-semibold text-gray-300 underline decoration-gray-300 underline-offset-4"
+          className="shrink-0 rounded-md px-1 text-xs font-semibold text-gray-300 underline decoration-gray-300 underline-offset-4 tabular-nums"
         >
           v{process.env.NEXT_PUBLIC_APP_VERSION}
         </Link>
-        <div className="flex items-center gap-3">
-          <span className="truncate text-sm font-medium text-gray-300">{displayName}</span>
+        {/* min-w-0が無いと、長いメールアドレスでも省略されずにヘッダーが横にはみ出す */}
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="min-w-0 truncate text-sm font-medium text-gray-300">{displayName}</span>
           <button
             type="button"
             onClick={handleSignOut}
             disabled={loggingOut}
-            className="min-h-9 rounded-lg border border-gray-600 px-3 text-sm font-semibold text-gray-300 disabled:opacity-50"
+            className="min-h-9 shrink-0 rounded-lg border border-gray-600 px-3 text-sm font-semibold text-gray-300 disabled:opacity-50"
           >
-            {loggingOut ? "..." : "ログアウト"}
+            {loggingOut ? "ログアウト中…" : "ログアウト"}
           </button>
         </div>
       </header>
@@ -89,7 +97,7 @@ function TopBar() {
   );
 }
 
-/** ログイン済みであることを要求する。requireGroupを指定すると家族グループへの参加も必須にする。 */
+/** ログイン済みであることを要求する。requireGroupを指定するとグループへの参加も必須にする。 */
 export function RequireAuth({
   children,
   requireGroup = false,

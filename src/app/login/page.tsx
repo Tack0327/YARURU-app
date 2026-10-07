@@ -54,19 +54,10 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-4 flex items-center justify-center gap-2 text-center text-2xl font-bold text-gray-100">
+        <h1 className="mb-8 flex items-center justify-center gap-2 text-center text-2xl font-bold text-gray-100">
           YARURU
-          <span className="text-xs font-normal text-gray-500">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
+          <span className="text-xs font-normal text-gray-400 tabular-nums">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
         </h1>
-        <label className="mb-8 flex items-center justify-center gap-2 text-sm text-gray-300">
-          <input
-            type="checkbox"
-            checked={theme === "dark"}
-            onChange={(e) => handleToggleTheme(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-600"
-          />
-          薄暗い背景
-        </label>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <div>
             <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-300">
@@ -117,9 +108,19 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-sm text-gray-300">
           アカウントをお持ちでない方は{" "}
           <Link href="/signup" className="font-semibold text-blue-400">
-            新規登録
+            アカウント作成
           </Link>
         </p>
+        {/* ログイン前に画面を見やすくしたい人向け。ログイン後は設定画面からも変えられる */}
+        <label className="mt-8 flex items-center justify-center gap-2 text-xs text-gray-400">
+          <input
+            type="checkbox"
+            checked={theme === "dark"}
+            onChange={(e) => handleToggleTheme(e.target.checked)}
+            className="size-4 rounded border-gray-600"
+          />
+          薄暗い背景で表示する
+        </label>
       </div>
     </div>
   );

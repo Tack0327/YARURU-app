@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   let slotClaimed = false;
   try {
     const items = await fetchItemsByIds(supabase, itemIds);
-    if (items.length === 0) return errorResponse("出力できるチケットがありません。", 404);
+    if (items.length === 0) return errorResponse("出力できる予定・作業がありません。", 404);
 
     // 連打でGmailの1日の送信上限を使い切り、パスワード再設定メールまで届かなくなることを防ぐ
     const { data: slot, error: slotError } = await supabase.rpc("claim_csv_email_slot");
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
         : "Excelで開いたときに数式として実行されないよう、「= + - @」で始まる値の先頭に「'」を付けています。";
     await sendMailWithAttachment({
       to: email,
-      subject: `【YARURU】チケットCSV・${CSV_PURPOSE_LABEL[purpose]}（${items.length}件）`,
-      text: `YARURUで選択したチケット${items.length}件のCSV（${CSV_PURPOSE_LABEL[purpose]}）を添付します。\n${note}`,
+      subject: `【YARURU】予定・作業のCSV・${CSV_PURPOSE_LABEL[purpose]}（${items.length}件）`,
+      text: `YARURUで選択した予定・作業${items.length}件のCSV（${CSV_PURPOSE_LABEL[purpose]}）を添付します。\n${note}`,
       attachment: { filename: csvFileName(purpose), content: csv, contentType: "text/csv; charset=utf-8" },
     });
 
