@@ -56,7 +56,7 @@ export default function SignupPage() {
 
   if (confirmationSent) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4 text-center">
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-gray-800 px-4 text-center">
         <h1 className="mb-4 text-2xl font-bold text-gray-100">確認メールを送信しました</h1>
         <p className="mb-8 max-w-sm text-sm text-gray-300">
           {email} 宛に届いたメール内のリンクから認証を完了してください。
@@ -69,7 +69,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
         <h1 className="mb-8 text-center text-2xl font-bold text-gray-100">新規登録</h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>

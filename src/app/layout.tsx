@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/AuthProvider";
 import { NavigationTracker } from "@/components/NavigationTracker";
@@ -22,6 +22,11 @@ export const metadata: Metadata = {
   description: "グループの予定・実施作業をみんなで共有するアプリ",
 };
 
+// iPhoneのホームバー・ノッチの領域まで画面を広げ、env(safe-area-inset-*)で下部ナビ等の位置を調整できるようにする
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -39,7 +44,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <head>の中に置く。 */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="min-h-full flex flex-col bg-gray-900 text-gray-100">
+      {/* 横向きのiPhoneで、ノッチの領域に文字が隠れないよう左右に余白を取る */}
+      <body className="min-h-full flex flex-col bg-gray-900 pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-gray-100">
         {/* ページ読み込みと並行してSupabaseへの接続（DNS・TLS）を先に確立し、初回アクセス時の体感速度を改善する */}
         {supabaseUrl && <link rel="preconnect" href={supabaseUrl} />}
         <ThemeSync />

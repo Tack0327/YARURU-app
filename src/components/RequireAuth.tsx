@@ -7,7 +7,7 @@ import { useAuth } from "./AuthProvider";
 import { NavBar } from "./NavBar";
 
 function LoadingScreen() {
-  return <div className="flex min-h-screen items-center justify-center text-gray-400">読み込み中...</div>;
+  return <div className="flex min-h-dvh items-center justify-center text-gray-400">読み込み中...</div>;
 }
 
 function GroupsErrorScreen({ message }: { message: string }) {
@@ -21,7 +21,7 @@ function GroupsErrorScreen({ message }: { message: string }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
       <p className="text-sm text-red-400">{message}</p>
       <button
         type="button"
@@ -126,8 +126,10 @@ export function RequireAuth({
   }
 
   if (!showNav) {
+    // 子の画面（グループ作成・参加）はflex-1で残りの高さを埋める。子もmin-h-dvhにすると、
+    // ヘッダーの高さ分だけ画面からはみ出して常にスクロールが出てしまう
     return (
-      <div className="min-h-screen">
+      <div className="flex min-h-dvh flex-col">
         <TopBar />
         {children}
       </div>
@@ -135,7 +137,8 @@ export function RequireAuth({
   }
 
   return (
-    <div className="min-h-screen pb-20">
+    // 下部ナビ（高さ3.5rem＋iPhoneのホームバー）に最後の内容が隠れないよう、その分の余白を取る
+    <div className="min-h-dvh pb-[calc(5rem+env(safe-area-inset-bottom))]">
       <TopBar />
       <main className="mx-auto max-w-2xl px-4 py-6">{children}</main>
       <NavBar />

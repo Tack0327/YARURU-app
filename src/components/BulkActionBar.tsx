@@ -102,7 +102,7 @@ export function BulkActionBar({
 
   if (choosingExport) {
     return (
-      <div className="fixed inset-x-0 bottom-14 z-40 border-t border-blue-800 bg-blue-950">
+      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-blue-800 bg-blue-950">
         <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3">
           <p className="text-sm font-semibold text-blue-200">選択した{selectedCount}件をCSVで出力します</p>
           <div role="radiogroup" aria-label="CSVの用途" className="grid grid-cols-2 gap-2">
@@ -160,7 +160,7 @@ export function BulkActionBar({
 
   if (confirmingDelete) {
     return (
-      <div className="fixed inset-x-0 bottom-14 z-40 border-t border-red-800 bg-red-950">
+      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-red-800 bg-red-950">
         <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
           <p className="flex-1 text-sm font-semibold text-red-200">
             選択した{selectedCount}件を削除しますか？この操作は取り消せません。
@@ -194,7 +194,7 @@ export function BulkActionBar({
   // スマホでは変更欄（担当者・状況・日付）が画面の大半を覆ってしまうため、「まとめて変更」を押すまで折りたたむ。
   // 横幅に余裕のあるsm以上の画面では、これまでどおり常に表示する。
   return (
-    <div className="fixed inset-x-0 bottom-14 z-40 border-t border-blue-800 bg-blue-950">
+    <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-blue-800 bg-blue-950">
       <div className="mx-auto flex max-w-2xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
         <div className="flex items-center justify-between sm:shrink-0">
           <p className="whitespace-nowrap text-sm font-semibold text-blue-200">{selectedCount}件選択中</p>

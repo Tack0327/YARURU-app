@@ -41,7 +41,7 @@ function ForgotPasswordContent() {
 
   if (sent) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4 text-center">
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-gray-800 px-4 text-center">
         <h1 className="mb-4 text-2xl font-bold text-gray-100">メールを送信しました</h1>
         <p className="mb-8 max-w-sm text-sm text-gray-300">
           {email} 宛にパスワード再設定用のリンクを送信しました。メール内のリンクを開き、新しいパスワードを設定してください。
@@ -54,7 +54,7 @@ function ForgotPasswordContent() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
         <h1 className="mb-4 text-center text-2xl font-bold text-gray-100">パスワードの再設定</h1>
         <p className="mb-8 text-center text-sm text-gray-300">
@@ -100,7 +100,7 @@ function ForgotPasswordContent() {
 
 export default function ForgotPasswordPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-gray-400">読み込み中...</div>}>
+    <Suspense fallback={<div className="flex min-h-dvh items-center justify-center text-gray-400">読み込み中...</div>}>
       <ForgotPasswordContent />
     </Suspense>
   );

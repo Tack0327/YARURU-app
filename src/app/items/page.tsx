@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BulkActionBar, BULK_UNASSIGN_VALUE } from "@/components/BulkActionBar";
 import { FilterBar } from "@/components/FilterBar";
 import { ItemCard } from "@/components/ItemCard";
+import { LoadError } from "@/components/LoadError";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { useSelectableGroups } from "@/hooks/useSelectableGroups";
@@ -255,9 +256,9 @@ function ItemsContent() {
 
       <FilterBar filters={filters} members={members} groups={groups} onChange={handleChangeFilters} />
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
-
-      {!items ? (
+      {error ? (
+        <LoadError message={error} onRetry={load} />
+      ) : !items ? (
         <p className="text-gray-400">読み込み中...</p>
       ) : items.length === 0 ? (
         <p className="text-sm text-gray-500">該当する項目はありません</p>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { LoadError } from "@/components/LoadError";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { deleteNote, fetchMyPrivateNote, fetchSharedNote, upsertMyPrivateNote, upsertSharedNote } from "@/lib/notes";
@@ -30,21 +31,29 @@ function NoteEditContent() {
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!user || !dateKey) return;
     if (visibility === "shared" && !group) return;
     setNote(undefined);
-    const fetcher =
-      visibility === "shared" ? fetchSharedNote(supabase, group!.group.id, dateKey) : fetchMyPrivateNote(supabase, user.id, dateKey);
-    fetcher
-      .then((fetched) => {
-        setNote(fetched);
-        setTitle(fetched?.title ?? "");
-        setContent(fetched?.content ?? "");
-      })
-      .catch(() => setError("メモの取得に失敗しました。"));
+    setLoadError(null);
+    try {
+      const fetched =
+        visibility === "shared"
+          ? await fetchSharedNote(supabase, group!.group.id, dateKey)
+          : await fetchMyPrivateNote(supabase, user.id, dateKey);
+      setNote(fetched);
+      setTitle(fetched?.title ?? "");
+      setContent(fetched?.content ?? "");
+    } catch {
+      setLoadError("メモの取得に失敗しました。通信状況をご確認のうえ再度お試しください。");
+    }
   }, [supabase, group, user, dateKey, visibility]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   function backToHome() {
     // tは、ホーム画面に戻ったときに必ずメモ・カレンダーの印を再取得させるためのキャッシュ回避用の値
@@ -101,6 +110,10 @@ function NoteEditContent() {
 
   if (!dateKey) {
     return <p className="text-sm text-red-400">日付が指定されていません。</p>;
+  }
+
+  if (loadError) {
+    return <LoadError message={loadError} onRetry={load} />;
   }
 
   if (note === undefined) {

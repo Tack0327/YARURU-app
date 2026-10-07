@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ItemForm, type ItemFormValues } from "@/components/ItemForm";
+import { LoadError } from "@/components/LoadError";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useToast } from "@/components/ToastProvider";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
@@ -22,19 +23,26 @@ function ItemDetailContent() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // 担当者候補は「今表示中のグループ」ではなく、必ずこのチケット自身が属するグループのメンバーにする
-    // （複数グループを横断表示できるチケット一覧から開いた場合に、無関係な家族が候補に出るのを防ぐ）
-    fetchItem(supabase, params.id)
-      .then(async (fetchedItem) => {
-        setItem(fetchedItem);
-        if (fetchedItem) {
-          const fetchedMembers = await fetchGroupMembers(supabase, fetchedItem.group_id);
-          setMembers(fetchedMembers);
-        }
-      })
-      .catch(() => setError("データの取得に失敗しました。"));
+  const load = useCallback(async () => {
+    setError(null);
+    setItem(undefined);
+    try {
+      // 担当者候補は「今表示中のグループ」ではなく、必ずこのチケット自身が属するグループのメンバーにする
+      // （複数グループを横断表示できるチケット一覧から開いた場合に、無関係なグループが候補に出るのを防ぐ）
+      const fetchedItem = await fetchItem(supabase, params.id);
+      if (fetchedItem) {
+        const fetchedMembers = await fetchGroupMembers(supabase, fetchedItem.group_id);
+        setMembers(fetchedMembers);
+      }
+      setItem(fetchedItem);
+    } catch {
+      setError("データの取得に失敗しました。通信状況をご確認のうえ再度お試しください。");
+    }
   }, [supabase, params.id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleSubmit = useCallback(
     async (values: ItemFormValues) => {
@@ -78,7 +86,7 @@ function ItemDetailContent() {
   }, [supabase, params.id, showToast, router]);
 
   if (error) {
-    return <p className="text-sm text-red-400">{error}</p>;
+    return <LoadError message={error} onRetry={load} />;
   }
 
   if (item === undefined) {

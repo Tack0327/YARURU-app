@@ -33,7 +33,7 @@ function NewGroupForm() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4">
+    <div className="flex flex-1 flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
         <h1 className="mb-2 text-center text-2xl font-bold text-gray-100">グループを作成</h1>
         <p className="mb-8 text-center text-sm text-gray-300">

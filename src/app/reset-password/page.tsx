@@ -130,12 +130,12 @@ export default function ResetPasswordPage() {
   }
 
   if (linkStatus === "checking") {
-    return <div className="flex min-h-screen items-center justify-center bg-gray-800 text-gray-400">確認中...</div>;
+    return <div className="flex min-h-dvh items-center justify-center bg-gray-800 text-gray-400">確認中...</div>;
   }
 
   if (linkStatus === "invalid") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4 text-center">
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-gray-800 px-4 text-center">
         <h1 className="mb-4 text-2xl font-bold text-gray-100">リンクが無効です</h1>
         <p className="mb-8 max-w-sm text-sm text-gray-300">
           再設定用のリンクの有効期限が切れているか、すでに使用済みです。また、再設定メールを送信したときと同じブラウザでリンクを開く必要があります。お手数ですが、もう一度再設定メールを送信してください。
@@ -152,7 +152,7 @@ export default function ResetPasswordPage() {
 
   if (linkStatus === "notRecovery") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4 text-center">
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-gray-800 px-4 text-center">
         <h1 className="mb-4 text-2xl font-bold text-gray-100">再設定メールのリンクから開いてください</h1>
         <p className="mb-8 max-w-sm text-sm text-gray-300">
           安全のため、パスワードの変更は、再設定メールのリンクを開いてから{RECOVERY_SESSION_MAX_AGE_SECONDS / 60}
@@ -170,7 +170,7 @@ export default function ResetPasswordPage() {
 
   if (done) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4 text-center">
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-gray-800 px-4 text-center">
         <h1 className="mb-4 text-2xl font-bold text-gray-100">パスワードを更新しました</h1>
         <p className="mb-2 max-w-sm text-sm text-gray-300">次回から新しいパスワードでログインしてください。</p>
         <p className="mb-8 max-w-sm text-sm text-gray-300">
@@ -189,7 +189,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 px-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-gray-800 px-4">
       <div className="w-full max-w-sm">
         <h1 className="mb-8 text-center text-2xl font-bold text-gray-100">新しいパスワードの設定</h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>

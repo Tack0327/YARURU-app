@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { ItemCard } from "@/components/ItemCard";
+import { LoadError } from "@/components/LoadError";
 import { RequireAuth } from "@/components/RequireAuth";
 import { fetchGroupMembers, type MemberWithProfile } from "@/lib/families";
 import { fetchCompletedHistory } from "@/lib/items";
@@ -27,7 +28,7 @@ function HistoryContent() {
       setItems(fetchedItems);
       setMembers(fetchedMembers);
     } catch {
-      setError("完了履歴の取得に失敗しました。");
+      setError("完了履歴の取得に失敗しました。通信状況をご確認のうえ再度お試しください。");
     }
   }, [supabase, group]);
 
@@ -40,8 +41,9 @@ function HistoryContent() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-bold text-gray-100">完了履歴</h1>
-      {error && <p className="text-sm text-red-400">{error}</p>}
-      {!items ? (
+      {error ? (
+        <LoadError message={error} onRetry={load} />
+      ) : !items ? (
         <p className="text-gray-400">読み込み中...</p>
       ) : items.length === 0 ? (
         <p className="text-sm text-gray-500">完了した項目はまだありません</p>

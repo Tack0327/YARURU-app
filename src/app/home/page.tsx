@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { CalendarView, MonthGridView } from "@/components/CalendarView";
 import { DateNotes } from "@/components/DateNotes";
 import { ItemCard } from "@/components/ItemCard";
+import { LoadError } from "@/components/LoadError";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useSelectableGroups } from "@/hooks/useSelectableGroups";
 import { dateKeyJst, dueDeadlineMs, isOverdue, upcomingRangeEndKey, type UpcomingRange } from "@/lib/dateUtils";
@@ -198,7 +199,7 @@ function HomeContent() {
   }
 
   if (error) {
-    return <p className="text-sm text-red-400">{error}</p>;
+    return <LoadError message={error} onRetry={load} />;
   }
 
   if (!items) {

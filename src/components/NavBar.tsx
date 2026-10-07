@@ -19,7 +19,8 @@ export function NavBar() {
   const items = isSuperAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-700 bg-gray-800">
+    // iPhoneのホームバーにタブが重ならないよう、その高さ分だけ下に余白を取る
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-700 bg-gray-800 pb-[env(safe-area-inset-bottom)]">
       <ul className="mx-auto flex max-w-2xl">
         {items.map((item) => {
           // チケットの詳細・新規登録（/items/...）はホームからも開くため、チケット一覧を経由したように見えないよう一覧のときだけ光らせる
